@@ -1,1 +1,1 @@
-https://ywbisa.github.io/atomtools/weekly%20data.html - for live Weekly Data
+https://ywbisa.github.io/atomtools/wkt.html - for live Weekly Data
