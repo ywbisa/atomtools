@@ -298,7 +298,7 @@
 
   <!-- MAIN DASHBOARD CARD -->
   <div class="card">
-    <div class="card-title">Weekly Ticket Summary Processor (Shift: 1:00 PM - 12:00 PM)</div>
+    <div class="card-title">Weekly Ticket Summary Processor (Shift: 3:00 PM - 8:00 AM)</div>
     
     <div class="controls">
       <div class="control-group">
@@ -494,7 +494,7 @@ function processCSV() {
       
       if (result) {
         statusDiv.style.color = "#22c55e";
-        statusDiv.textContent = `✅ Successfully processed local weekly data for Day ${startDay} to Day ${endDay} .`;
+        statusDiv.textContent = `✅ Successfully processed local weekly data for Day ${startDay} to Day ${endDay} (Matching Google Sheet Logic).`;
         renderTable(result.summary);
         renderExpiredTable(result.expiredList);
       }
@@ -546,10 +546,9 @@ function generateWeeklySummary(rows, startDay, endDay) {
     const yr = dt.getFullYear();
     const mo = dt.getMonth();
 
-    // UPDATED FOR 1:00 PM TO 12:00 PM SHIFT WINDOW
-    const startBoundary = new Date(yr, mo, startDay, 13, 0, 0, 0).getTime();
-    const endBoundary = new Date(yr, mo, endDay + 1, 12, 0, 0, 0).getTime();
-    const shiftedValue = dt.getTime() + (13 * 60 * 60 * 1000);
+    const startBoundary = new Date(yr, mo, startDay, 15, 0, 0, 0).getTime();
+    const endBoundary = new Date(yr, mo, endDay + 1, 7, 0, 0, 0).getTime();
+    const shiftedValue = dt.getTime() + (15 * 60 * 60 * 1000);
 
     const isWithinWeeklyShift = (shiftedValue >= startBoundary) && (shiftedValue <= endBoundary);
 
