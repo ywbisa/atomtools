@@ -36,37 +36,63 @@
         }
         .grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
-            gap: 10px; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 12px; 
             margin-bottom: 12px; 
         }
         .form-group { display: flex; flex-direction: column; }
         label { 
             font-weight: 500; 
-            margin-bottom: 4px; 
+            margin-bottom: 6px; 
             font-size: 0.75em; 
             text-transform: uppercase; 
             color: #8e8e93; 
             letter-spacing: 0.5px;
         }
-        input[type="file"], input[type="number"] { 
-            padding: 6px 10px; 
+
+        /* DRAG & DROP ZONE STYLES */
+        .drop-zone {
+            border: 2px dashed #2c2c2e;
+            border-radius: 8px;
+            padding: 12px 10px;
+            text-align: center;
+            background-color: #121212;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 52px;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #0a84ff;
+            background-color: #1a1a1e;
+        }
+
+        .drop-zone-text {
+            font-size: 0.85em;
+            color: #8e8e93;
+            pointer-events: none;
+        }
+
+        .drop-zone-text span {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        input[type="file"] { display: none; }
+
+        input[type="number"] { 
+            padding: 8px 10px; 
             background-color: #121212;
             border: 1px solid #2c2c2e; 
             border-radius: 6px; 
             color: #ffffff;
             font-size: 0.85em;
             outline: none;
-        }
-        input[type="file"]::file-selector-button {
-            background: #2c2c2e;
-            color: #fff;
-            border: none;
-            padding: 3px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 8px;
-            font-size: 0.8em;
+            height: 52px;
         }
         input:focus { border-color: #0a84ff; }
         
@@ -75,7 +101,7 @@
             background-color: #ffffff; 
             color: #000000; 
             border: none; 
-            padding: 8px 16px; 
+            padding: 10px 18px; 
             border-radius: 6px; 
             cursor: pointer; 
             font-weight: 600; 
@@ -157,23 +183,32 @@
     
     <div class="grid">
         <div class="form-group">
-            <label for="openFile">1. Open Tickets CSV</label>
-            <input type="file" id="openFile" accept=".csv">
+            <label>1. Open Tickets CSV</label>
+            <div class="drop-zone" id="dropZoneOpen">
+                <div class="drop-zone-text" id="labelOpen">Drag & drop CSV or <span>browse</span></div>
+                <input type="file" id="openFile" accept=".csv">
+            </div>
         </div>
         <div class="form-group">
-            <label for="cooloffFile">2. Cool Off CSV</label>
-            <input type="file" id="cooloffFile" accept=".csv">
+            <label>2. Cool Off CSV</label>
+            <div class="drop-zone" id="dropZoneCooloff">
+                <div class="drop-zone-text" id="labelCooloff">Drag & drop CSV or <span>browse</span></div>
+                <input type="file" id="cooloffFile" accept=".csv">
+            </div>
         </div>
         <div class="form-group">
-            <label for="disputedFile">3. Disputed CSV</label>
-            <input type="file" id="disputedFile" accept=".csv">
+            <label>3. Disputed CSV</label>
+            <div class="drop-zone" id="dropZoneDisputed">
+                <div class="drop-zone-text" id="labelDisputed">Drag & drop CSV or <span>browse</span></div>
+                <input type="file" id="disputedFile" accept=".csv">
+            </div>
         </div>
     </div>
 
     <div class="grid">
         <div class="form-group">
             <label for="filterDay">Filter Day of Month (Target Day)</label>
-            <input type="number" id="filterDay" min="1" max="31" value="17" placeholder="e.g. 17">
+            <input type="number" id="filterDay" min="1" max="31" value="" placeholder="e.g. 17">
         </div>
         <div class="form-group">
             <label for="targetQuota">Target Quota</label>
@@ -223,6 +258,54 @@ const ROSTER = [
 
 const EXCLUDED = ["Justine Parilla", "Aigel Albaran", "Elvie Estellore", "Ivy Algoso"];
 
+function setupDropZone(zoneId, inputId, labelId) {
+    const dropZone = document.getElementById(zoneId);
+    const input = document.getElementById(inputId);
+    const label = document.getElementById(labelId);
+
+    dropZone.addEventListener('click', () => input.click());
+
+    input.addEventListener('change', () => {
+        if (input.files.length) {
+            label.innerHTML = `Loaded: <span>${input.files[0].name}</span>`;
+        }
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        if (files.length) {
+            if (files[0].name.endsWith('.csv')) {
+                input.files = files;
+                label.innerHTML = `Loaded: <span>${files[0].name}</span>`;
+            } else {
+                alert("Please drop a valid .csv file!");
+            }
+        }
+    });
+}
+
+setupDropZone('dropZoneOpen', 'openFile', 'labelOpen');
+setupDropZone('dropZoneCooloff', 'cooloffFile', 'labelCooloff');
+setupDropZone('dropZoneDisputed', 'disputedFile', 'labelDisputed');
+
 function parseCSV(file) {
     return new Promise((resolve) => {
         if (!file) return resolve([]);
@@ -244,52 +327,61 @@ function getVal(row, possibleKeys) {
     return "";
 }
 
-/**
- * Filter matching the logic in the Daily Tracker processor
- */
+function parseRawTimestamp(dateStr) {
+    if (!dateStr) return NaN;
+    let cleanStr = dateStr.trim();
+    // Parse timestamp directly without adding local offset shifts
+    let parts = cleanStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+    if (parts) {
+        return Date.UTC(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5]));
+    }
+    return Date.parse(cleanStr);
+}
+
 function isSamePHTShiftDay(dateStr, targetDay) {
     if (!dateStr) return false;
 
-    // 1. First try matching exact day using regex pattern from tracker code (-MM-DD or -DD)
     const match = dateStr.match(/-\d{2}-?(\d{2})/);
     if (match) {
         return parseInt(match[1], 10) === parseInt(targetDay, 10);
     }
 
-    // 2. Fallback to parsing as Date object
-    let cleanStr = dateStr.replace(" UTC", "").replace(" PST", "").replace(" PHT", "").replace(' ', 'T');
-    let dateObj = new Date(cleanStr);
+    let parsedMs = parseRawTimestamp(dateStr);
+    if (isNaN(parsedMs)) return false;
 
-    if (isNaN(dateObj.getTime())) {
-        let parts = dateStr.split(/[\s/:-]+/);
-        if (parts.length >= 3) {
-            if (parts[0].length === 4) {
-                dateObj = new Date(parts[0], parts[1] - 1, parts[2], parts[3] || 0, parts[4] || 0);
-            } else {
-                dateObj = new Date(parts[2], parts[0] - 1, parts[1], parts[3] || 0, parts[4] || 0);
-            }
-        }
+    let phtTime = new Date(parsedMs + (8 * 60 * 60 * 1000)); 
+    if (phtTime.getUTCHours() < 8) {
+        phtTime.setUTCDate(phtTime.getUTCDate() - 1);
     }
 
-    if (isNaN(dateObj.getTime())) return false;
+    return phtTime.getUTCDate() === parseInt(targetDay, 10);
+}
 
-    let phtTime = new Date(dateObj.getTime() + (15 * 60 * 60 * 1000));
-    if (phtTime.getHours() < 8) {
-        phtTime.setDate(phtTime.getDate() - 1);
+function formatZendeskSLA(diffMins) {
+    if (diffMins === null || isNaN(diffMins)) return "-";
+
+    let prefix = diffMins < 0 ? "-" : "";
+    let absMins = Math.abs(diffMins);
+
+    if (absMins < 60) {
+        return `${prefix}${absMins}m`;
+    } else if (absMins < 1440) {
+        let hours = Math.floor(absMins / 60);
+        return `${prefix}${hours}h`;
+    } else {
+        let days = Math.floor(absMins / 1440);
+        return `${prefix}${days}d`;
     }
-
-    return phtTime.getDate() === parseInt(targetDay, 10);
 }
 
 function parseAnySLA(rawSlaVal, refTimeMs) {
-    if (!rawSlaVal) return null;
+    if (!rawSlaVal || typeof rawSlaVal !== 'string') return null;
     let str = rawSlaVal.trim();
-
     let diffMins = null;
 
-    let d = str.match(/(\d+)\s*d/i);
-    let h = str.match(/(\d+)\s*h/i);
-    let m = str.match(/(\d+)\s*m/i);
+    let d = str.match(/^(-?\d+)\s*d/i);
+    let h = str.match(/^(-?\d+)\s*h/i);
+    let m = str.match(/^(-?\d+)\s*m/i);
 
     if (d || h || m) {
         diffMins = 0;
@@ -297,10 +389,10 @@ function parseAnySLA(rawSlaVal, refTimeMs) {
         if (h) diffMins += parseInt(h[1], 10) * 60;
         if (m) diffMins += parseInt(m[1], 10);
     } else {
-        let parsedDate = new Date(str.replace(' ', 'T'));
-        if (!isNaN(parsedDate.getTime())) {
-            let diffMs = parsedDate.getTime() - refTimeMs;
-            diffMins = Math.floor(diffMs / (1000 * 60));
+        let parsedMs = parseRawTimestamp(str);
+        if (!isNaN(parsedMs)) {
+            let diffMs = parsedMs - refTimeMs;
+            diffMins = Math.round(diffMs / (1000 * 60));
         }
     }
 
@@ -308,45 +400,42 @@ function parseAnySLA(rawSlaVal, refTimeMs) {
         return { minutes: 99999, label: str };
     }
 
-    if (diffMins <= 0) {
-        return { minutes: diffMins, label: "Expired" };
-    }
-
-    let label = "";
-    if (diffMins >= 1440) {
-        let roundedDays = Math.ceil(diffMins / 1440);
-        label = `${roundedDays}d`;
-    } else if (diffMins >= 60) {
-        let roundedHours = Math.ceil(diffMins / 60);
-        label = `${roundedHours}h`;
-    } else {
-        label = `${diffMins}m`;
-    }
-
-    return { minutes: diffMins, label: label };
+    return { 
+        minutes: diffMins, 
+        label: formatZendeskSLA(diffMins)
+    };
 }
 
-function extractRefTimeFromFilename(fileName, rows) {
-    if (fileName) {
-        let match = fileName.match(/(\d{4}-\d{2}-\d{2})[-_](\d{2})(\d{2})/);
+function extractRefTimeFromFilename(fileObj, rows) {
+    // 1. Try to extract exact export timestamp from CSV Filename
+    if (fileObj && fileObj.name) {
+        let match = fileObj.name.match(/(\d{4})-(\d{2})-(\d{2})[-_](\d{2})(\d{2})/);
         if (match) {
-            let datePart = match[1];
-            let hh = match[2];
-            let mm = match[3];
-            let d = new Date(`${datePart}T${hh}:${mm}:00`);
-            if (!isNaN(d.getTime())) return d.getTime();
+            let year = parseInt(match[1]);
+            let month = parseInt(match[2]) - 1;
+            let day = parseInt(match[3]);
+            let hh = parseInt(match[4]);
+            let mm = parseInt(match[5]);
+            return Date.UTC(year, month, day, hh, mm);
         }
     }
-    let earliest = Infinity;
+    
+    // 2. Fallback: Lowest SLA timestamp in dataset - 7 minutes
+    let earliestSlaMs = Infinity;
     const slaKeys = ["sla", "sla time", "time remaining", "remaining sla", "due in", "expires in"];
     rows.forEach(r => {
         let val = getVal(r, slaKeys);
-        let dt = new Date(val.replace(' ', 'T'));
-        if (!isNaN(dt.getTime()) && dt.getTime() < earliest) {
-            earliest = dt.getTime();
+        let parsedMs = parseRawTimestamp(val);
+        if (!isNaN(parsedMs) && parsedMs < earliestSlaMs) {
+            earliestSlaMs = parsedMs;
         }
     });
-    return earliest !== Infinity ? (earliest - (4 * 3600 * 1000)) : Date.now();
+
+    if (earliestSlaMs !== Infinity) {
+        return earliestSlaMs - (7 * 60 * 1000); 
+    }
+
+    return Date.now();
 }
 
 async function processCSVs() {
@@ -379,9 +468,8 @@ async function processCSVs() {
     const statusKeys = ["ticket status", "status"];
     const slaKeys = ["sla", "sla time", "time remaining", "remaining sla", "due in", "expires in", "sla status"];
 
-    let refTimeMs = extractRefTimeFromFilename(openFile ? openFile.name : "", openData);
+    let refTimeMs = extractRefTimeFromFilename(openFile, openData);
 
-    // 1. Process Open Tickets
     openData.forEach(row => {
         let agent = getVal(row, agentKeys);
         let status = getVal(row, statusKeys);
@@ -398,7 +486,6 @@ async function processCSVs() {
         }
     });
 
-    // 2. Process Cool Off Tickets
     cooloffData.forEach(row => {
         let agent = getVal(row, agentKeys);
         let status = getVal(row, statusKeys);
@@ -409,10 +496,8 @@ async function processCSVs() {
         }
     });
 
-    // Valid dispute status criteria matching Code 1
     const validDisputeStatuses = ['successful', 'unsuccessful', 'denied', 'already refunded', 'cool off', 'escalated', 'expired'];
 
-    // 3. Process Disputed Tickets (Filtered strictly like Daily Tracker)
     disputedData.forEach(row => {
         let agent = getVal(row, agentKeys);
         let timeStr = getVal(row, timeKeys);
@@ -421,7 +506,6 @@ async function processCSVs() {
         let matchedAgent = activeAgents.find(a => a.toLowerCase() === agent.toLowerCase());
         
         if (matchedAgent) {
-            // Check if status is a valid dispute or default if blank
             const isValidStatus = status === "" || validDisputeStatuses.includes(status);
             
             if (isValidStatus && isSamePHTShiftDay(timeStr, filterDay)) {
@@ -445,13 +529,13 @@ async function processCSVs() {
 
         if (slaList.length === 1) {
             slaSummary = slaList[0].label;
-            if (slaList[0].minutes <= 1440) isUrgent = true;
+            if (slaList[0].minutes <= 60) isUrgent = true;
         } else if (slaList.length > 1) {
             let lowest = slaList[0].label;
             let highest = slaList[slaList.length - 1].label;
 
             slaSummary = (lowest === highest) ? lowest : `${lowest} - ${highest}`;
-            if (slaList[0].minutes <= 1440) isUrgent = true;
+            if (slaList[0].minutes <= 60) isUrgent = true;
         }
 
         return { agent, open, cool, disp, needed, slaSummary, isUrgent, totalProcessed };
