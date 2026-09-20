@@ -216,7 +216,7 @@
       font-size: 11px; 
     }
 
-    /* GOOGLE SHEETS MATCHING SPREADSHEET TABLE */
+    /* GOOGLE SHEETS MATCHING SPREADSHEET TABLE WITH CRISP 1PX BORDERS */
     .table-container {
       width: 100%;
       overflow-x: auto;
@@ -225,16 +225,22 @@
 
     table { 
       width: 100%; 
-      border-collapse: collapse; 
+      /* Separate borders prevent html2canvas from doubling border thickness */
+      border-collapse: separate !important; 
+      border-spacing: 0 !important;
       background-color: #ffffff;
-      border: 1px solid var(--gs-border);
+      border-top: 1px solid var(--gs-border);
+      border-left: 1px solid var(--gs-border);
       font-family: Arial, sans-serif;
     }
 
-    /* Center-align all table headers and data cells by default */
+    /* Individual cells feature right and bottom borders for clean 1px lines */
     th, td { 
-      border: 1px solid var(--gs-border); 
-      padding: 3px 6px; 
+      border-right: 1px solid var(--gs-border) !important;
+      border-bottom: 1px solid var(--gs-border) !important;
+      border-top: none !important;
+      border-left: none !important;
+      padding: 4px 6px; 
       text-align: center !important; 
       font-size: 13px;
       line-height: 1.25;
@@ -282,8 +288,8 @@
       font-weight: 700 !important; 
       background-color: var(--gs-total-bg) !important; 
       color: #000000 !important;
-      border-top: 2px solid #000000 !important;
-      border-bottom: 2px solid #000000 !important;
+      border-top: 1px solid #000000 !important;
+      border-bottom: 1px solid #000000 !important;
       padding: 5px 6px;
       text-align: center !important;
     }
@@ -580,7 +586,7 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// COPY IMAGE TO CLIPBOARD FUNCTION
+// CRISP 1PX BORDER CLIPBOARD IMAGE COPY FUNCTION
 async function copyTableToClipboard() {
   const table = document.getElementById('summaryTable');
   const btn = document.getElementById('copyBtn');
@@ -593,10 +599,12 @@ async function copyTableToClipboard() {
   try {
     btn.textContent = "⏳ Copying...";
 
-    // Capture table as canvas (scale 2 for crisp resolution)
+    // Capture table as canvas with scale 2 for high definition
     const canvas = await html2canvas(table, {
       scale: 2,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false
     });
 
     // Convert canvas to Blob image
