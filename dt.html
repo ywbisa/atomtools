@@ -8,48 +8,59 @@
   <!-- BROWSER TAB ICON (FAVICON) -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23121212'/><text x='50%' y='68%' font-family='sans-serif' font-weight='900' font-size='52' fill='%23D1C2A5' text-anchor='middle'>DT</text></svg>">
 
+  <!-- HTML2CANVAS LIBRARY FOR HIGH-QUALITY IMAGE CONVERSION -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
   <style>
     :root {
       --bg-color: #080808;
-      --card-bg: #121212;
-      --border-color: #262626;
+      --card-bg: #0d0d0d;
+      --border-color: #222222;
       --brand-beige: #D1C2A5;
       --text-main: #EEEEEE;
       --text-muted: #888888;
-      --table-row-even: #161616;
-      --accent-blue: #3b82f6;
+      
+      /* Google Sheets Specific Color Palette */
+      --gs-header-bg: #b7b7b7;
+      --gs-header-text: #ffffff;
+      --gs-row-even: #f3f3f3;
+      --gs-row-odd: #ffffff;
+      --gs-border: #cccccc;
+      --gs-text: #000000;
+      --gs-total-bg: #e6e6e6;
     }
 
     * { box-sizing: border-box; }
 
     body { 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
       background-color: var(--bg-color); 
       color: var(--text-main);
       margin: 0;
-      padding: 20px 12px;
+      padding: 10px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
+      font-size: 14px;
     }
 
     /* ATOMS BRAND HEADER */
     .brand-header {
       width: 100%;
-      max-width: 950px;
-      margin-bottom: 16px;
+      max-width: 1200px;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 12px;
+      padding-bottom: 8px;
       border-bottom: 1px solid var(--border-color);
     }
 
     .brand-title {
       font-weight: 800;
-      font-size: 18px;
-      letter-spacing: 2px;
+      font-size: 16px;
+      letter-spacing: 1.5px;
       color: var(--brand-beige);
       text-transform: uppercase;
     }
@@ -57,9 +68,9 @@
     .status-badge {
       font-size: 10px;
       color: #22c55e;
-      background: #1a1a1a;
-      padding: 4px 10px;
-      border-radius: 20px;
+      background: #141414;
+      padding: 3px 8px;
+      border-radius: 12px;
       border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
@@ -72,50 +83,50 @@
       height: 5px;
       background-color: #22c55e;
       border-radius: 50%;
-      box-shadow: 0 0 5px #22c55e;
+      box-shadow: 0 0 4px #22c55e;
     }
 
     /* CARD CONTAINER */
     .card { 
       background: var(--card-bg); 
-      padding: 16px 18px; 
-      border-radius: 10px; 
+      padding: 12px; 
+      border-radius: 6px; 
       border: 1px solid var(--border-color);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
       width: 100%;
-      max-width: 950px; 
+      max-width: 1200px; 
+      margin-bottom: 12px;
     }
 
     .card-title {
       margin-top: 0;
-      margin-bottom: 14px;
-      font-size: 14px;
-      font-weight: 600;
+      margin-bottom: 10px;
+      font-size: 13px;
+      font-weight: 700;
       letter-spacing: 0.5px;
       color: var(--text-main);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .card-title::before {
       content: '';
       display: inline-block;
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       background-color: var(--brand-beige);
-      border-radius: 2px;
+      border-radius: 1px;
     }
 
     /* CONTROLS SECTION */
     .controls { 
       display: flex; 
-      gap: 16px; 
+      gap: 10px; 
       align-items: flex-end; 
-      margin-bottom: 16px;
-      background: #1a1a1a;
-      padding: 12px 14px;
-      border-radius: 8px;
+      margin-bottom: 10px;
+      background: #141414;
+      padding: 8px 10px;
+      border-radius: 4px;
       border: 1px solid var(--border-color);
       flex-wrap: wrap;
     }
@@ -123,16 +134,16 @@
     .control-group { 
       display: flex; 
       flex-direction: column; 
-      gap: 4px; 
-      font-size: 11px;
+      gap: 3px; 
+      font-size: 10px;
       color: var(--text-muted);
     }
 
     /* DRAG & DROP ZONE STYLES */
     .drop-zone {
-      border: 2px dashed var(--border-color);
-      border-radius: 6px;
-      padding: 10px 16px;
+      border: 1px dashed #3a3a3c;
+      border-radius: 4px;
+      padding: 4px 10px;
       text-align: center;
       background-color: #080808;
       cursor: pointer;
@@ -141,7 +152,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-width: 200px;
+      min-width: 180px;
+      height: 32px;
     }
 
     .drop-zone:hover, .drop-zone.dragover {
@@ -150,7 +162,7 @@
     }
 
     .drop-zone-text {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
     }
 
@@ -164,26 +176,27 @@
     }
 
     input[type="number"] { 
-      padding: 4px 8px; 
+      padding: 4px 6px; 
       border: 1px solid var(--border-color); 
       border-radius: 4px; 
       font-size: 11px; 
       background-color: #080808;
       color: var(--text-main);
-      width: 65px;
-      height: 27px;
+      width: 60px;
+      height: 32px;
+      outline: none;
     }
 
     button { 
       background-color: var(--brand-beige); 
       color: #080808; 
       border: none; 
-      padding: 0 16px; 
+      padding: 0 14px; 
       border-radius: 4px; 
       cursor: pointer; 
       font-weight: 700; 
       font-size: 11px; 
-      height: 27px;
+      height: 32px;
       transition: opacity 0.2s ease;
     }
 
@@ -191,75 +204,99 @@
       opacity: 0.85; 
     }
 
+    .btn-copy {
+      background-color: #0284c7;
+      color: #ffffff;
+      margin-left: auto;
+    }
+
     #status { 
-      margin-bottom: 10px; 
+      margin-bottom: 8px; 
       font-weight: 600; 
       font-size: 11px; 
     }
 
-    /* COMPACT TABLE STYLES */
+    /* GOOGLE SHEETS MATCHING SPREADSHEET TABLE */
     .table-container {
       width: 100%;
       overflow-x: auto;
+      background-color: #ffffff;
     }
 
     table { 
       width: 100%; 
-      border-collapse: separate; 
-      border-spacing: 0;
-      font-size: 11px; 
-      color: var(--text-main);
+      border-collapse: collapse; 
+      background-color: #ffffff;
+      border: 1px solid var(--gs-border);
+      font-family: Arial, sans-serif;
+    }
+
+    /* Center-align all table headers and data cells by default */
+    th, td { 
+      border: 1px solid var(--gs-border); 
+      padding: 3px 6px; 
+      text-align: center !important; 
+      font-size: 13px;
+      line-height: 1.25;
+      color: var(--gs-text);
+      font-variant-numeric: tabular-nums;
     }
 
     th { 
-      background-color: #1a1a1a; 
-      color: var(--brand-beige); 
-      padding: 6px 8px; 
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      font-size: 9px;
-      border-top: 1px solid var(--border-color);
-      border-bottom: 1px solid var(--border-color);
-      text-align: center; 
-    }
-
-    th:first-child { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }
-    th:last-child { border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
-
-    td { 
-      padding: 5px 8px; 
-      border-bottom: 1px solid #1f1f1f; 
-      text-align: center; 
-      line-height: 1.2;
+      background-color: var(--gs-header-bg); 
+      color: var(--gs-header-text); 
+      padding: 5px 6px; 
+      font-weight: normal !important;
+      font-size: 13px;
     }
 
     tr:nth-child(even) td { 
-      background-color: var(--table-row-even); 
+      background-color: var(--gs-row-even); 
+    }
+
+    tr:nth-child(odd) td { 
+      background-color: var(--gs-row-odd); 
     }
 
     tr:hover td {
-      background-color: #222222;
+      background-color: #e8f0fe;
     }
 
+    /* Assignee data cells stay left-aligned */
     .text-left { 
       text-align: left !important; 
-      font-weight: 600; 
-      color: var(--text-main);
+      font-weight: normal !important; 
+      color: #000000 !important;
     }
 
+    /* Assignee Header text set to black and left-aligned */
+    th.assignee-header {
+      color: #000000 !important;
+      font-style: italic;
+      text-align: left !important;
+      font-weight: normal !important;
+    }
+
+    /* Summary / Grand Total row styling */
     .summary-row td { 
-      font-weight: bold; 
-      background-color: #1c1917 !important; 
-      color: var(--brand-beige);
-      border-top: 1px solid var(--border-color);
-      border-bottom: 1px solid var(--border-color);
-      padding: 6px 8px;
+      font-weight: 700 !important; 
+      background-color: var(--gs-total-bg) !important; 
+      color: #000000 !important;
+      border-top: 2px solid #000000 !important;
+      border-bottom: 2px solid #000000 !important;
+      padding: 5px 6px;
+      text-align: center !important;
+    }
+
+    /* Keep "Grand Total" label left-aligned */
+    .summary-row td.text-left {
+      font-weight: 700 !important;
+      text-align: left !important;
     }
 
     /* FOOTER BRANDING */
     .brand-footer {
-      margin-top: 28px;
+      margin-top: 16px;
       font-size: 10px;
       color: var(--text-muted);
       letter-spacing: 1px;
@@ -280,7 +317,7 @@
 
   <!-- MAIN DASHBOARD CARD -->
   <div class="card">
-    <div class="card-title">Ticket Summary Processor</div>
+    <div class="card-title">Daily Ticket Summary Processor</div>
     
     <div class="controls">
       <div class="control-group">
@@ -296,12 +333,13 @@
         <input type="number" id="targetDay" value="" min="1" max="31">
       </div>
 
-      <button onclick="processCSV()">Process Report</button>
+      <button onclick="processCSV()">Process Daily Report</button>
+      <button class="btn-copy" id="copyBtn" onclick="copyTableToClipboard()">📋 Copy Image to Clipboard</button>
     </div>
 
     <div id="status"></div>
     <div class="table-container" id="output">
-      <p style="font-size: 11px; color: var(--text-muted);">Upload or drop a CSV file above to generate summary locally.</p>
+      <p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload or drop a CSV file above to generate summary locally.</p>
     </div>
   </div>
 
@@ -434,12 +472,13 @@ function processCSV() {
       
       if (summaryArray) {
         statusDiv.style.color = "#22c55e";
-        statusDiv.textContent = `✅ Successfully processed local data for Day ${targetDay}.`;
+        statusDiv.textContent = `✅ Successfully processed local daily data for Day ${targetDay}.`;
         renderTable(summaryArray);
       }
     } catch(err) {
       statusDiv.style.color = "#ef4444";
       statusDiv.textContent = "❌ Error processing CSV: " + err.message;
+      console.error(err);
     }
   };
 
@@ -454,7 +493,7 @@ function generateSummary(rows, targetDay) {
 
   const headers = rows[0].map(h => cleanStr(h).toLowerCase());
   let assigneeIdx = headers.findIndex(h => h.includes('assignee') && !h.includes('updated'));
-  let statusIdx = headers.findIndex(h => h.includes('status'));
+  let statusIdx = headers.findIndex(h => h === 'status' || (h.includes('status') && !h.includes('updated')));
   let dateIdx = headers.findIndex(h => h.includes('assignee updated') || h.includes('updated'));
 
   if (assigneeIdx === -1) assigneeIdx = 2;
@@ -481,10 +520,18 @@ function generateSummary(rows, targetDay) {
     if (rowDay !== targetDay) continue;
 
     if (!stats[assignee]) {
-      stats[assignee] = { successful: 0, denied: 0, refunded: 0, coolOff: 0, escalated: 0, expired: 0 };
+      stats[assignee] = { 
+        successful: 0, 
+        denied: 0, 
+        refunded: 0, 
+        coolOff: 0, 
+        escalated: 0, 
+        expired: 0
+      };
     }
 
     const lowerStatus = status.toLowerCase();
+
     if (lowerStatus === 'successful') stats[assignee].successful++;
     else if (lowerStatus === 'unsuccessful' || lowerStatus === 'denied') stats[assignee].denied++;
     else if (lowerStatus === 'already refunded') stats[assignee].refunded++;
@@ -498,19 +545,25 @@ function generateSummary(rows, targetDay) {
     const totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated + s.expired;
     const winRateDenom = s.successful + s.denied + s.coolOff;
     const winRate = winRateDenom > 0 ? (s.successful / winRateDenom * 100).toFixed(2) : "0.00";
-    return { name, ...s, totalDispute, winRate: parseFloat(winRate) };
+
+    return { 
+      name, 
+      ...s, 
+      totalDispute, 
+      winRate: parseFloat(winRate)
+    };
   }).sort((a, b) => b.totalDispute - a.totalDispute);
 }
 
 function renderTable(data) {
   const outputDiv = document.getElementById('output');
   if (!data || data.length === 0) {
-    outputDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold; font-size: 11px;">No records found matching criteria.</p>`;
+    outputDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold; font-size: 11px; background: var(--card-bg); padding: 5px;">No records found matching criteria.</p>`;
     return;
   }
 
   let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
-  let html = `<table><thead><tr><th class="text-left">Assignee</th><th>Successful</th><th>Denied</th><th>Already Refunded</th><th>Cool Off</th><th>Escalated</th><th>Expired</th><th>Total Order Dispute</th><th>Win Rate</th></tr></thead><tbody>`;
+  let html = `<table id="summaryTable"><thead><tr><th class="assignee-header">Assignee</th><th>Successful</th><th>Denied</th><th>Already Refunded</th><th>Cool Off</th><th>Escalated</th><th>Expired</th><th>Total Order Disputed</th><th>Winrate</th></tr></thead><tbody>`;
 
   data.forEach(row => {
     totals.succ += row.successful; totals.den += row.denied; totals.ref += row.refunded;
@@ -525,6 +578,52 @@ function renderTable(data) {
 
   html += `<tr class="summary-row"><td class="text-left">Grand Total</td><td>${totals.succ}</td><td>${totals.den}</td><td>${totals.ref}</td><td>${totals.cool}</td><td>${totals.esc}</td><td>${totals.exp}</td><td>${totals.total}</td><td>${overallWinRate}%</td></tr></tbody></table>`;
   outputDiv.innerHTML = html;
+}
+
+// COPY IMAGE TO CLIPBOARD FUNCTION
+async function copyTableToClipboard() {
+  const table = document.getElementById('summaryTable');
+  const btn = document.getElementById('copyBtn');
+
+  if (!table) {
+    alert("Please process a CSV file first to generate the table!");
+    return;
+  }
+
+  try {
+    btn.textContent = "⏳ Copying...";
+
+    // Capture table as canvas (scale 2 for crisp resolution)
+    const canvas = await html2canvas(table, {
+      scale: 2,
+      backgroundColor: '#ffffff'
+    });
+
+    // Convert canvas to Blob image
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        alert("Failed to generate image Blob.");
+        btn.textContent = "📋 Copy Image to Clipboard";
+        return;
+      }
+
+      // Write image Blob to clipboard
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+
+      btn.textContent = "✅ Copied to Clipboard!";
+      setTimeout(() => {
+        btn.textContent = "📋 Copy Image to Clipboard";
+      }, 3000);
+
+    }, 'image/png');
+
+  } catch (err) {
+    console.error("Copy failed:", err);
+    alert("Unable to copy directly to clipboard. Make sure your browser supports clipboard permissions!");
+    btn.textContent = "📋 Copy Image to Clipboard";
+  }
 }
 </script>
 </body>
