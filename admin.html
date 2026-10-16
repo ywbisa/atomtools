@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATOM Daily Tracker - Admin</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23121212'/><text x='50%' y='68%' font-family='sans-serif' font-weight='900' font-size='52' fill='%23D1C2A5'>DT</text></svg>">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #080808;
+      --card-bg: #0d0d0d;
+      --border-color: #222222;
+      --brand-beige: #D1C2A5;
+      --text-main: #EEEEEE;
+      --text-muted: #888888;
+      --gs-header-assignee-bg: #dbe5f1;
+      --gs-header-metrics-bg: #7b92b3;
+      --gs-header-text: #ffffff;
+      --gs-row-even: #f3f3f3;
+      --gs-row-odd: #ffffff;
+      --gs-border: #d9d9d9;
+      --gs-text: #000000;
+      --gs-total-bg: #e0e0e0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body { 
+      font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      background-color: var(--bg-color); 
+      color: var(--text-main);
+      margin: 0;
+      padding: 10px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .brand-header {
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 1.5px;
+      color: var(--brand-beige);
+      text-transform: uppercase;
+    }
+
+    .status-badge {
+      font-size: 10px;
+      color: #3b82f6;
+      background: #141414;
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      background-color: #3b82f6;
+      border-radius: 50%;
+      box-shadow: 0 0 4px #3b82f6;
+    }
+
+    .card { 
+      background: var(--card-bg); 
+      padding: 12px; 
+      border-radius: 6px; 
+      border: 1px solid var(--border-color);
+      width: 100%;
+      max-width: 1200px; 
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-title::before {
+      content: '';
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      background-color: var(--brand-beige);
+      border-radius: 1px;
+    }
+
+    .controls { 
+      display: flex; 
+      gap: 10px; 
+      align-items: flex-end; 
+      margin-bottom: 10px;
+      background: #141414;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .control-group { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 3px; 
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .drop-zone {
+      border: 1px dashed #3a3a3c;
+      border-radius: 4px;
+      padding: 4px 10px;
+      text-align: center;
+      background-color: #080808;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 180px;
+      height: 32px;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--brand-beige);
+      background-color: #141414;
+    }
+
+    .drop-zone-text {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .drop-zone-text span {
+      color: var(--brand-beige);
+      font-weight: 600;
+    }
+
+    input[type="file"] { display: none; }
+
+    input[type="number"] { 
+      padding: 4px 6px; 
+      border: 1px solid var(--border-color); 
+      border-radius: 4px; 
+      font-size: 11px; 
+      background-color: #080808;
+      color: var(--text-main);
+      width: 60px;
+      height: 32px;
+      outline: none;
+    }
+
+    button { 
+      background-color: var(--brand-beige); 
+      color: #080808; 
+      border: none; 
+      padding: 0 12px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      font-weight: 700; 
+      font-size: 11px; 
+      height: 32px;
+      transition: opacity 0.2s ease;
+    }
+
+    button:hover { opacity: 0.85; }
+
+    .btn-secondary {
+      background-color: #262626;
+      color: var(--brand-beige);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-copy {
+      background-color: #0284c7;
+      color: #ffffff;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 6px;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+
+    #status { 
+      margin-bottom: 8px; 
+      font-weight: 600; 
+      font-size: 11px; 
+    }
+
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      background-color: #ffffff;
+    }
+
+    table { 
+      width: 100%; 
+      border-collapse: separate; 
+      border-spacing: 0;
+      background-color: #ffffff;
+      border-top: 1px solid var(--gs-border);
+      border-left: 1px solid var(--gs-border);
+      font-family: Arial, sans-serif;
+    }
+
+    th, td { 
+      border-right: 1px solid var(--gs-border);
+      border-bottom: 1px solid var(--gs-border);
+      padding: 4px 8px; 
+      text-align: center !important; 
+      font-size: 13px;
+      line-height: 1.25;
+      color: var(--gs-text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    th { 
+      background-color: var(--gs-header-metrics-bg) !important; 
+      color: var(--gs-header-text) !important; 
+      padding: 6px 8px; 
+      font-weight: normal !important;
+      font-size: 13px;
+    }
+
+    th.assignee-header {
+      background-color: var(--gs-header-assignee-bg) !important;
+      color: #000000 !important;
+      font-style: italic;
+      text-align: left !important;
+      font-weight: normal !important;
+    }
+
+    tr:nth-child(even) td { background-color: var(--gs-row-even); }
+    tr:nth-child(odd) td { background-color: var(--gs-row-odd); }
+    tr:hover td { background-color: #e8f0fe; }
+
+    .text-left { 
+      text-align: left !important; 
+      font-weight: normal !important; 
+      color: #000000 !important;
+    }
+
+    .summary-row td { 
+      font-weight: 700 !important; 
+      background-color: var(--gs-total-bg) !important; 
+      color: #000000 !important;
+      border-top: 2px solid #000000 !important;
+      border-bottom: 2px solid #000000 !important;
+      padding: 5px 8px;
+      text-align: center !important;
+    }
+
+    .summary-row td.text-left {
+      font-weight: 700 !important;
+      text-align: left !important;
+    }
+
+    .brand-footer {
+      margin-top: 16px;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="brand-header">
+    <div class="brand-title">ATOMS Daily Tracker — Admin Console</div>
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      <span>Admin Publishing Mode</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Daily Ticket Summary Processor (OFO Deduplicated)</div>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label><b>Upload CSV File:</b></label>
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-zone-text" id="dropZoneText">Drag & drop CSV here or <span>browse</span></div>
+          <input type="file" id="csvFile" accept=".csv">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label><b>Target Day (PHT Date):</b></label>
+        <input type="number" id="targetDay" value="" min="1" max="31">
+      </div>
+
+      <button onclick="processCSV()">Process Daily Report</button>
+
+      <div class="btn-group">
+        <button class="btn-copy" id="copyBtn" onclick="copyTableToClipboard()">📋 Copy Image</button>
+        <button class="btn-secondary" id="shareBtn" onclick="copyViewerLink()" disabled>🔗 Copy Viewer Link</button>
+        <button class="btn-secondary" id="downloadBtn" onclick="downloadJSON()" disabled>💾 Download data.json</button>
+      </div>
+    </div>
+
+    <div id="status"></div>
+    <div class="table-container" id="output">
+      <p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload or drop a CSV file above to process records.</p>
+    </div>
+  </div>
+
+  <div class="brand-footer">
+    ATOMS Local Operations &copy; 2026
+  </div>
+
+<script>
+let lastProcessedPayload = null;
+
+function parseCSV(text) {
+  const rows = [];
+  let currentRow = [];
+  let currentVal = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        currentVal += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      currentRow.push(currentVal.trim());
+      currentVal = '';
+    } else if ((char === '\r' || char === '\n') && !insideQuotes) {
+      if (char === '\r' && nextChar === '\n') i++;
+      currentRow.push(currentVal.trim());
+      if (currentRow.length > 1 || currentRow[0] !== '') rows.push(currentRow);
+      currentRow = [];
+      currentVal = '';
+    } else {
+      currentVal += char;
+    }
+  }
+
+  if (currentVal || currentRow.length > 0) {
+    currentRow.push(currentVal.trim());
+    rows.push(currentRow);
+  }
+  return rows;
+}
+
+function cleanStr(val) {
+  if (!val) return '';
+  return val.toString().replace(/^['"\s\ufeff]+|['"\s]+\$/g, '').trim();
+}
+
+const dropZone = document.getElementById('dropZone');
+const csvFileInput = document.getElementById('csvFile');
+const dropZoneText = document.getElementById('dropZoneText');
+
+dropZone.addEventListener('click', () => csvFileInput.click());
+
+csvFileInput.addEventListener('change', () => {
+  if (csvFileInput.files.length) updateDropZoneLabel(csvFileInput.files[0].name);
+});
+
+['dragenter', 'dragover'].forEach(eventName => {
+  dropZone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.classList.add('dragover');
+  }, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+  dropZone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.classList.remove('dragover');
+  }, false);
+});
+
+dropZone.addEventListener('drop', (e) => {
+  const dt = e.dataTransfer;
+  const files = dt.files;
+  if (files.length) {
+    if (files[0].name.endsWith('.csv')) {
+      csvFileInput.files = files;
+      updateDropZoneLabel(files[0].name);
+    } else {
+      alert("Please drop a valid .csv file!");
+    }
+  }
+});
+
+function updateDropZoneLabel(filename) {
+  dropZoneText.innerHTML = `Loaded: <span>${filename}</span>`;
+}
+
+function processCSV() {
+  const fileInput = document.getElementById('csvFile');
+  const targetDay = parseInt(document.getElementById('targetDay').value, 10);
+  const statusDiv = document.getElementById('status');
+  
+  if (!fileInput.files.length) {
+    alert("Please select or drop a CSV file first!");
+    return;
+  }
+  if (isNaN(targetDay)) {
+    alert("Please enter a valid day number!");
+    return;
+  }
+
+  statusDiv.style.color = "var(--brand-beige)";
+  statusDiv.textContent = "Processing CSV locally with OFO Deduplication...";
+
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const parsedData = parseCSV(e.target.result);
+      const summaryArray = generateSummary(parsedData, targetDay);
+      
+      if (summaryArray) {
+        lastProcessedPayload = {
+          day: targetDay,
+          updatedAt: new Date().toLocaleString(),
+          rows: summaryArray
+        };
+
+        // Cache locally for same-machine viewer testing
+        localStorage.setItem('atom_tracker_live_data', JSON.stringify(lastProcessedPayload));
+
+        document.getElementById('shareBtn').disabled = false;
+        document.getElementById('downloadBtn').disabled = false;
+
+        statusDiv.style.color = "#22c55e";
+        statusDiv.textContent = `✅ Processed Day ${targetDay}. Table updated and stored locally!`;
+        renderTable(summaryArray);
+      }
+    } catch(err) {
+      statusDiv.style.color = "#ef4444";
+      statusDiv.textContent = "❌ Error processing CSV: " + err.message;
+      console.error(err);
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+function generateSummary(rows, targetDay) {
+  if (!rows || rows.length < 2) {
+    alert("CSV file appears to be empty or missing data!");
+    return null;
+  }
+
+  const headers = rows[0].map(h => cleanStr(h).toLowerCase());
+  let assigneeIdx = headers.findIndex(h => h.includes('assignee') && !h.includes('updated'));
+  let statusIdx = headers.findIndex(h => h === 'status' || (h.includes('status') && !h.includes('updated')));
+  let dateIdx = headers.findIndex(h => h.includes('solved'));
+  if (dateIdx === -1) dateIdx = headers.findIndex(h => h.includes('assignee updated') || h.includes('updated'));
+  let ofoIdx = headers.findIndex(h => h.includes('ofo display') || h.includes('ofo'));
+
+  if (assigneeIdx === -1) assigneeIdx = 2;
+  if (statusIdx === -1) statusIdx = 1;
+  if (dateIdx === -1) dateIdx = 13;
+  if (ofoIdx === -1) ofoIdx = 12;
+
+  const stats = {};
+  const seenOfoIds = new Set();
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length <= Math.max(assigneeIdx, statusIdx, dateIdx)) continue;
+
+    const assignee = cleanStr(row[assigneeIdx]);
+    const status = cleanStr(row[statusIdx]);
+    const updatedStr = cleanStr(row[dateIdx]);
+    const ofoId = cleanStr(row[ofoIdx]);
+
+    if (!assignee || assignee === '-' || assignee === "'-") continue;
+
+    let rowDay = null;
+    if (updatedStr) {
+      const matchIso = updatedStr.match(/\d{4}-\d{2}-(\d{2})/);
+      if (matchIso) {
+        rowDay = parseInt(matchIso[1], 10);
+      } else {
+        const match = updatedStr.match(/-\d{2}-?(\d{2})/);
+        if (match) {
+          rowDay = parseInt(match[1], 10);
+        } else {
+          const parsedDate = new Date(updatedStr);
+          if (!isNaN(parsedDate.getTime())) rowDay = parsedDate.getDate();
+        }
+      }
+    }
+    if (rowDay !== targetDay) continue;
+
+    if (ofoId && ofoId !== '-' && ofoId !== "'-") {
+      const ofoKey = ofoId.toLowerCase();
+      if (seenOfoIds.has(ofoKey)) continue;
+      seenOfoIds.add(ofoKey);
+    }
+
+    if (!stats[assignee]) {
+      stats[assignee] = { successful: 0, denied: 0, refunded: 0, coolOff: 0, escalated: 0, expired: 0 };
+    }
+
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus === 'successful') stats[assignee].successful++;
+    else if (lowerStatus === 'unsuccessful' || lowerStatus === 'denied') stats[assignee].denied++;
+    else if (lowerStatus === 'already refunded') stats[assignee].refunded++;
+    else if (lowerStatus === 'cool off') stats[assignee].coolOff++;
+    else if (lowerStatus === 'escalated') stats[assignee].escalated++;
+    else if (lowerStatus === 'expired') stats[assignee].expired++;
+  }
+
+  return Object.keys(stats).map(name => {
+    const s = stats[name];
+    const totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated + s.expired;
+    const winRateDenom = s.successful + s.denied + s.coolOff;
+    const winRate = winRateDenom > 0 ? (s.successful / winRateDenom * 100).toFixed(2) : "0.00";
+
+    return { 
+      name, 
+      ...s, 
+      totalDispute, 
+      winRate: parseFloat(winRate)
+    };
+  }).sort((a, b) => b.totalDispute - a.totalDispute);
+}
+
+function renderTable(data) {
+  const outputDiv = document.getElementById('output');
+  if (!data || data.length === 0) {
+    outputDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold; font-size: 11px; background: var(--card-bg); padding: 5px;">No records found matching criteria.</p>`;
+    return;
+  }
+
+  let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
+  let html = `<table id="summaryTable"><thead><tr><th class="assignee-header">Assignee</th><th>Successful</th><th>Denied</th><th>Already Refunded</th><th>Cool Off</th><th>Escalated</th><th>Expired</th><th>Total Order Disputed</th><th>Winrate</th></tr></thead><tbody>`;
+
+  data.forEach(row => {
+    totals.succ += row.successful; totals.den += row.denied; totals.ref += row.refunded;
+    totals.cool += row.coolOff; totals.esc += row.escalated; totals.exp += row.expired;
+    totals.total += row.totalDispute;
+
+    html += `<tr><td class="text-left">${row.name}</td><td>${row.successful}</td><td>${row.denied}</td><td>${row.refunded}</td><td>${row.coolOff}</td><td>${row.escalated}</td><td>${row.expired}</td><td>${row.totalDispute}</td><td>${row.winRate.toFixed(2)}%</td></tr>`;
+  });
+
+  const overallWinRateDenom = totals.succ + totals.den + totals.cool;
+  const overallWinRate = overallWinRateDenom > 0 ? (totals.succ / overallWinRateDenom * 100).toFixed(2) : "0.00";
+
+  html += `<tr class="summary-row"><td class="text-left">Grand Total</td><td>${totals.succ}</td><td>${totals.den}</td><td>${totals.ref}</td><td>${totals.cool}</td><td>${totals.esc}</td><td>${totals.exp}</td><td>${totals.total}</td><td>${overallWinRate}%</td></tr></tbody></table>`;
+  outputDiv.innerHTML = html;
+}
+
+// GENERATE SHARABLE LINK FOR VIEWER
+function copyViewerLink() {
+  if (!lastProcessedPayload) return;
+  const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(lastProcessedPayload)))));
+  
+  // Construct viewer URL relative to current location
+  const currentUrl = window.location.href.split('admin.html')[0].split('#')[0].split('?')[0];
+  const viewerUrl = `${currentUrl}viewer.html#data=${encoded}`;
+
+  navigator.clipboard.writeText(viewerUrl).then(() => {
+    const btn = document.getElementById('shareBtn');
+    btn.textContent = "✅ Link Copied!";
+    setTimeout(() => { btn.textContent = "🔗 Copy Viewer Link"; }, 3000);
+  }).catch(() => {
+    prompt("Copy this direct viewer URL:", viewerUrl);
+  });
+}
+
+// DOWNLOAD DATA.JSON TO COMMIT TO GITHUB REPO
+function downloadJSON() {
+  if (!lastProcessedPayload) return;
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastProcessedPayload, null, 2));
+  const downloadAnchor = document.createElement('a');
+  downloadAnchor.setAttribute("href", dataStr);
+  downloadAnchor.setAttribute("download", "data.json");
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
+async function copyTableToClipboard() {
+  const table = document.getElementById('summaryTable');
+  const btn = document.getElementById('copyBtn');
+
+  if (!table) {
+    alert("Please process a CSV file first!");
+    return;
+  }
+
+  try {
+    btn.textContent = "⏳ Copying...";
+    const canvas = await html2canvas(table, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    canvas.toBlob(async (blob) => {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      btn.textContent = "✅ Copied Image!";
+      setTimeout(() => { btn.textContent = "📋 Copy Image"; }, 3000);
+    }, 'image/png');
+  } catch (err) {
+    alert("Clipboard permission denied or copy failed.");
+    btn.textContent = "📋 Copy Image";
+  }
+}
+</script>
+</body>
+</html>
