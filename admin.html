@@ -322,7 +322,7 @@
   </div>
 
 <script>
-const SYNC_TOPIC = "ywbisa_atomtools_sync";
+const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 
 function parseCSV(text) {
   const rows = [];
@@ -379,6 +379,7 @@ csvFileInput.addEventListener('change', () => {
 ['dragenter', 'dragover'].forEach(eventName => {
   dropZone.addEventListener(eventName, (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dropZone.classList.add('dragover');
   }, false);
 });
@@ -386,6 +387,7 @@ csvFileInput.addEventListener('change', () => {
 ['dragleave', 'drop'].forEach(eventName => {
   dropZone.addEventListener(eventName, (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dropZone.classList.remove('dragover');
   }, false);
 });
@@ -441,11 +443,11 @@ function processCSV() {
 
         renderTable(summaryArray);
 
-        // Local browser sync for testing tabs on the same computer
+        // Keep local tabs updated
         localStorage.setItem('atom_tracker_live_data', JSON.stringify(payload));
         try { new BroadcastChannel('atom_tracker_live_channel').postMessage(payload); } catch(e) {}
 
-        // Broadcast to Smart TV via zero-header POST (no CORS preflight)
+        // Broadcast directly across the cloud to the Smart TV
         statusDiv.textContent = "Broadcasting data directly to Smart TV...";
         try {
           const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}`, {
@@ -455,7 +457,7 @@ function processCSV() {
 
           if (res.ok) {
             statusDiv.style.color = "#22c55e";
-            statusDiv.textContent = `✅ Processed Day ${targetDay} and broadcast live! Your Smart TV will display it immediately.`;
+            statusDiv.textContent = `✅ Processed Day ${targetDay} and broadcast live! Your Smart TV will display it within 4 seconds.`;
           } else {
             throw new Error("Relay response status: " + res.status);
           }
@@ -519,6 +521,7 @@ function generateSummary(rows, targetDay) {
     }
     if (rowDay !== targetDay) continue;
 
+    // Direct row tally to match team leader Google Sheet (no OFO deduplication)
     if (!stats[assignee]) {
       stats[assignee] = { successful: 0, denied: 0, refunded: 0, coolOff: 0, escalated: 0, expired: 0 };
     }
