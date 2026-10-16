@@ -460,8 +460,11 @@ function processCSV() {
           rows: summaryArray
         };
 
-        // Cache locally for same-machine viewer testing
-        localStorage.setItem('atom_tracker_live_data', JSON.stringify(lastProcessedPayload));
+       localStorage.setItem('atom_tracker_live_data', JSON.stringify(lastProcessedPayload));
+try {
+  new BroadcastChannel('atom_tracker_live_channel').postMessage(lastProcessedPayload);
+} catch(e) {}
+        
 
         document.getElementById('shareBtn').disabled = false;
         document.getElementById('downloadBtn').disabled = false;
