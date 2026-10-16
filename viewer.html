@@ -216,14 +216,14 @@
     <div class="brand-title">ATOMS Daily Tracker</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span id="badgeText">Live Receiver Active</span>
+      <span id="badgeText">Live Auto-Update Active</span>
     </div>
   </div>
 
   <div class="card">
     <div class="card-top-bar">
       <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
-      <div class="report-meta" id="reportMeta">Listening for live updates...</div>
+      <div class="report-meta" id="reportMeta">Connecting live stream...</div>
     </div>
 
     <div class="table-container" id="output">
@@ -236,19 +236,56 @@
   </div>
 
 <script>
-// Zero-setup sync channel matching admin.html
 const SYNC_TOPIC = "ywbisa_atomtools_sync";
 let lastChecksum = "";
+let sseConnection = null;
 
-async function checkSync() {
+// 1. REAL-TIME DATA STREAM (Pushes updates to TV immediately upon upload)
+function startLiveStream() {
+  if (sseConnection) {
+    try { sseConnection.close(); } catch(e) {}
+  }
+
   try {
-    const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h`, { cache: 'no-store' });
+    sseConnection = new EventSource(`https://ntfy.sh/${SYNC_TOPIC}/sse?since=24h`);
+
+    sseConnection.onmessage = (event) => {
+      try {
+        const item = JSON.parse(event.data);
+        if (item.event === 'message' && item.message) {
+          const payload = JSON.parse(item.message);
+          renderReportFromPayload(payload);
+        }
+      } catch(e) {}
+    };
+
+    sseConnection.onerror = () => {
+      // Re-establish socket automatically if TV network drops temporarily
+      setTimeout(startLiveStream, 5000);
+    };
+  } catch(e) {
+    console.warn("EventSource not supported by TV browser, using anti-cache polling.");
+  }
+}
+
+// 2. ANTI-CACHE POLLING (Guarantees fresh check every 3s without caching)
+async function fetchAntiCacheCheck() {
+  try {
+    const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_ts=${Date.now()}`;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
+
     if (!res.ok) return;
 
     const rawText = await res.text();
     if (!rawText.trim()) return;
 
-    // Parse the newline-delimited stream to find the latest valid message
     const lines = rawText.trim().split('\n');
     for (let i = lines.length - 1; i >= 0; i--) {
       try {
@@ -261,13 +298,13 @@ async function checkSync() {
       } catch(e) {}
     }
   } catch(err) {
-    console.warn("Sync check retry...", err);
+    console.warn("Background check retry...", err);
   }
 }
 
 function renderReportFromPayload(payload) {
   const currentChecksum = JSON.stringify(payload);
-  if (currentChecksum === lastChecksum) return; // Prevent unnecessary DOM re-renders
+  if (currentChecksum === lastChecksum) return; 
   lastChecksum = currentChecksum;
 
   const meta = document.getElementById('reportMeta');
@@ -276,9 +313,8 @@ function renderReportFromPayload(payload) {
   if (payload.day) {
     title.textContent = `Daily Ticket Summary — Day ${payload.day} (PHT)`;
   }
-  meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
+  meta.textContent = payload.updatedAt ? `Last Live Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  // Unpack array-of-arrays into table rows
   const unpackedRows = payload.r.map(row => ({
     name: row[0],
     successful: row[1],
@@ -319,11 +355,12 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// Initial check on load
-checkSync();
+// Start real-time stream
+startLiveStream();
 
-// Poll every 3 seconds so the Smart TV automatically updates without user interaction
-setInterval(checkSync, 3000);
+// Initial check + continuous 3-second anti-cache polling
+fetchAntiCacheCheck();
+setInterval(fetchAntiCacheCheck, 3000);
 </script>
 </body>
 </html>
