@@ -112,35 +112,6 @@
       border-radius: 1px;
     }
 
-    .cloud-bar {
-      background: #141414;
-      border: 1px solid var(--border-color);
-      padding: 8px 10px;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      font-size: 11px;
-    }
-
-    .cloud-bar label {
-      color: var(--brand-beige);
-      font-weight: bold;
-      white-space: nowrap;
-    }
-
-    .cloud-bar input {
-      flex: 1;
-      background: #080808;
-      border: 1px solid #333333;
-      color: #ffffff;
-      padding: 5px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      outline: none;
-    }
-
     .controls { 
       display: flex; 
       gap: 10px; 
@@ -316,18 +287,11 @@
     <div class="brand-title">ATOMS Daily Tracker — Admin Console</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span>Admin Live Mode</span>
+      <span>Broadcaster Ready</span>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-title">Cloud Synchronization Settings</div>
-    <div class="cloud-bar">
-      <label>Firebase DB URL:</label>
-      <input type="text" id="firebaseUrl" placeholder="https://your-project-default-rtdb.firebaseio.com">
-      <button onclick="saveFirebaseUrl()">Save</button>
-    </div>
-
     <div class="card-title">Daily Ticket Summary Processor (OFO Deduplicated)</div>
     <div class="controls">
       <div class="control-group">
@@ -354,25 +318,12 @@
   </div>
 
   <div class="brand-footer">
-    ATOMS Local Operations &copy; 2026
+    ATOMS Operations &copy; 2026
   </div>
 
 <script>
-// ========================================================
-// 1. SET YOUR FIREBASE DATABASE URL HERE
-// ========================================================
-const FIREBASE_DB_URL = "https://your-project-default-rtdb.firebaseio.com"; 
-// Example: "https://atom-tracker-default-rtdb.firebaseio.com"
-
-const firebaseUrlInput = document.getElementById('firebaseUrl');
-const resolvedUrl = (FIREBASE_DB_URL || localStorage.getItem('atom_firebase_url') || "").replace(/\/\$/, "");
-firebaseUrlInput.value = resolvedUrl;
-
-function saveFirebaseUrl() {
-  let val = firebaseUrlInput.value.trim().replace(/\/\$/, "");
-  localStorage.setItem('atom_firebase_url', val);
-  alert("Firebase URL updated!");
-}
+// Zero-setup sync channel tied to your repository
+const SYNC_TOPIC = "ywbisa_atomtools_sync";
 
 function parseCSV(text) {
   const rows = [];
@@ -429,6 +380,7 @@ csvFileInput.addEventListener('change', () => {
 ['dragenter', 'dragover'].forEach(eventName => {
   dropZone.addEventListener(eventName, (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dropZone.classList.add('dragover');
   }, false);
 });
@@ -483,41 +435,44 @@ function processCSV() {
       const summaryArray = generateSummary(parsedData, targetDay);
       
       if (summaryArray) {
+        // Compact payload format to ensure ultra-fast transmission
         const payload = {
           day: targetDay,
           updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          rows: summaryArray
+          r: summaryArray.map(item => [
+            item.name,
+            item.successful,
+            item.denied,
+            item.refunded,
+            item.coolOff,
+            item.escalated,
+            item.expired,
+            item.totalDispute,
+            item.winRate
+          ])
         };
 
         renderTable(summaryArray);
 
-        // Upload to Firebase REST endpoint
-        const targetDbUrl = (firebaseUrlInput.value.trim() || FIREBASE_DB_URL).replace(/\/\$/, "");
-        if (targetDbUrl) {
-          statusDiv.textContent = "Syncing payload to Smart TV via Firebase Cloud...";
-          try {
-            const res = await fetch(`${targetDbUrl}/tracker.json`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            if (res.ok) {
-              statusDiv.style.color = "#22c55e";
-              statusDiv.textContent = `✅ Successfully processed Day ${targetDay} and broadcast live to your Smart TV!`;
-            } else {
-              throw new Error("HTTP " + res.status + " - Check Firebase rules.");
-            }
-          } catch(err) {
-            statusDiv.style.color = "#ef4444";
-            statusDiv.textContent = `⚠️ Processed locally, but Cloud broadcast failed: ${err.message}`;
-          }
-        } else {
-          statusDiv.style.color = "#ef4444";
-          statusDiv.textContent = `⚠️ Missing Firebase URL! Paste your URL in line 211 of the script.`;
-        }
+        // Zero-setup broadcast: sends directly across the internet to your Smart TV
+        statusDiv.textContent = "Broadcasting data directly to Smart TV...";
+        try {
+          const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Title': 'ATOM Tracker Update' }
+          });
 
-        localStorage.setItem('atom_tracker_live_data', JSON.stringify(payload));
-        try { new BroadcastChannel('atom_tracker_live_channel').postMessage(payload); } catch(e) {}
+          if (res.ok) {
+            statusDiv.style.color = "#22c55e";
+            statusDiv.textContent = `✅ Successfully processed Day ${targetDay} and broadcast live to your Smart TV!`;
+          } else {
+            throw new Error("Relay response not OK");
+          }
+        } catch(err) {
+          statusDiv.style.color = "#ef4444";
+          statusDiv.textContent = "⚠️ Processed locally, but broadcast failed. Ensure you have an internet connection.";
+        }
       }
     } catch(err) {
       statusDiv.style.color = "#ef4444";
