@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ATOM Daily Tracker - Smart TV Display</title>
-  
+
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23121212'/><text x='50%' y='68%' font-family='sans-serif' font-weight='900' font-size='52' fill='%23D1C2A5'>DT</text></svg>">
 
   <style>
@@ -189,7 +189,6 @@
     }
 
     .summary-row td.text-left {
-      font-weight: 700 !important;
       text-align: left !important;
     }
 
@@ -217,14 +216,14 @@
     <div class="brand-title">ATOMS Daily Tracker</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span id="badgeText">Cloud Connected</span>
+      <span id="badgeText">Live Receiver Active</span>
     </div>
   </div>
 
   <div class="card">
     <div class="card-top-bar">
       <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
-      <div class="report-meta" id="reportMeta">Connecting to cloud service...</div>
+      <div class="report-meta" id="reportMeta">Listening for live updates...</div>
     </div>
 
     <div class="table-container" id="output">
@@ -237,40 +236,39 @@
   </div>
 
 <script>
-// ========================================================
-// 1. SET YOUR FIREBASE DATABASE URL HERE
-// ========================================================
-const FIREBASE_DB_URL = "https://your-project-default-rtdb.firebaseio.com"; 
-// Example: "https://atom-tracker-default-rtdb.firebaseio.com"
+// Zero-setup sync channel matching admin.html
+const SYNC_TOPIC = "ywbisa_atomtools_sync";
+let lastChecksum = "";
 
-const urlParams = new URLSearchParams(window.location.search);
-const firebaseUrl = (FIREBASE_DB_URL || urlParams.get('db') || localStorage.getItem('atom_firebase_url') || "").replace(/\/\$/, "");
-
-let lastRenderedChecksum = "";
-
-async function fetchCloudData() {
-  if (!firebaseUrl || firebaseUrl.includes("your-project-default-rtdb")) {
-    document.getElementById('reportMeta').textContent = "⚠️ Missing Firebase URL in viewer.html script!";
-    return;
-  }
-
+async function checkSync() {
   try {
-    const res = await fetch(`${firebaseUrl}/tracker.json?_ts=${Date.now()}`, { cache: "no-store" });
-    if (res.ok) {
-      const payload = await res.json();
-      if (payload && payload.rows) {
-        displayReport(payload);
-      }
+    const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h`, { cache: 'no-store' });
+    if (!res.ok) return;
+
+    const rawText = await res.text();
+    if (!rawText.trim()) return;
+
+    // Parse the newline-delimited stream to find the latest valid message
+    const lines = rawText.trim().split('\n');
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try {
+        const item = JSON.parse(lines[i]);
+        if (item.event === 'message' && item.message) {
+          const payload = JSON.parse(item.message);
+          renderReportFromPayload(payload);
+          break;
+        }
+      } catch(e) {}
     }
-  } catch (err) {
-    console.warn("Polling retry...", err);
+  } catch(err) {
+    console.warn("Sync check retry...", err);
   }
 }
 
-function displayReport(payload) {
+function renderReportFromPayload(payload) {
   const currentChecksum = JSON.stringify(payload);
-  if (currentChecksum === lastRenderedChecksum) return;
-  lastRenderedChecksum = currentChecksum;
+  if (currentChecksum === lastChecksum) return; // Prevent unnecessary DOM re-renders
+  lastChecksum = currentChecksum;
 
   const meta = document.getElementById('reportMeta');
   const title = document.getElementById('reportTitle');
@@ -278,9 +276,22 @@ function displayReport(payload) {
   if (payload.day) {
     title.textContent = `Daily Ticket Summary — Day ${payload.day} (PHT)`;
   }
-  meta.textContent = payload.updatedAt ? `Last Synced: ${payload.updatedAt}` : 'Live Report Active';
+  meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  renderTable(payload.rows);
+  // Unpack array-of-arrays into table rows
+  const unpackedRows = payload.r.map(row => ({
+    name: row[0],
+    successful: row[1],
+    denied: row[2],
+    refunded: row[3],
+    coolOff: row[4],
+    escalated: row[5],
+    expired: row[6],
+    totalDispute: row[7],
+    winRate: row[8]
+  }));
+
+  renderTable(unpackedRows);
 }
 
 function renderTable(data) {
@@ -308,23 +319,11 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// Initial fetch on page load
-fetchCloudData();
+// Initial check on load
+checkSync();
 
-// Poll Firebase every 3 seconds for automated real-time updates
-setInterval(fetchCloudData, 3000);
-
-// Local cross-tab backup listener
-window.addEventListener('storage', (e) => {
-  if (e.key === 'atom_tracker_live_data' && e.newValue) {
-    try { displayReport(JSON.parse(e.newValue)); } catch(err) {}
-  }
-});
-try {
-  new BroadcastChannel('atom_tracker_live_channel').onmessage = (e) => {
-    if (e.data) displayReport(e.data);
-  };
-} catch(e) {}
+// Poll every 3 seconds so the Smart TV automatically updates without user interaction
+setInterval(checkSync, 3000);
 </script>
 </body>
 </html>
