@@ -113,7 +113,7 @@
     }
 
     .cloud-bar {
-      background: #111111;
+      background: #141414;
       border: 1px solid var(--border-color);
       padding: 8px 10px;
       border-radius: 4px;
@@ -343,7 +343,7 @@
         <input type="number" id="targetDay" value="" min="1" max="31">
       </div>
 
-      <button onclick="processCSV()">Process & Sync to TV</button>
+      <button onclick="processCSV()">Process & Broadcast to TV</button>
       <button class="btn-copy" id="copyBtn" onclick="copyTableToClipboard()">📋 Copy Image</button>
     </div>
 
@@ -358,15 +358,20 @@
   </div>
 
 <script>
-// Load saved Firebase URL or set a default
+// ========================================================
+// 1. SET YOUR FIREBASE DATABASE URL HERE
+// ========================================================
+const FIREBASE_DB_URL = "https://your-project-default-rtdb.firebaseio.com"; 
+// Example: "https://atom-tracker-default-rtdb.firebaseio.com"
+
 const firebaseUrlInput = document.getElementById('firebaseUrl');
-const savedDb = localStorage.getItem('atom_firebase_url') || '';
-firebaseUrlInput.value = savedDb;
+const resolvedUrl = (FIREBASE_DB_URL || localStorage.getItem('atom_firebase_url') || "").replace(/\/\$/, "");
+firebaseUrlInput.value = resolvedUrl;
 
 function saveFirebaseUrl() {
   let val = firebaseUrlInput.value.trim().replace(/\/\$/, "");
   localStorage.setItem('atom_firebase_url', val);
-  alert("Firebase URL saved!");
+  alert("Firebase URL updated!");
 }
 
 function parseCSV(text) {
@@ -486,36 +491,33 @@ function processCSV() {
 
         renderTable(summaryArray);
 
-        // 1. Sync to Cloud (Firebase) for Smart TV
-        const firebaseUrl = firebaseUrlInput.value.trim().replace(/\/\$/, "");
-        if (firebaseUrl) {
-          statusDiv.textContent = "Syncing payload to Smart TV via Cloud...";
+        // Upload to Firebase REST endpoint
+        const targetDbUrl = (firebaseUrlInput.value.trim() || FIREBASE_DB_URL).replace(/\/\$/, "");
+        if (targetDbUrl) {
+          statusDiv.textContent = "Syncing payload to Smart TV via Firebase Cloud...";
           try {
-            const res = await fetch(`${firebaseUrl}/tracker.json`, {
+            const res = await fetch(`${targetDbUrl}/tracker.json`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload)
             });
             if (res.ok) {
               statusDiv.style.color = "#22c55e";
-              statusDiv.textContent = `✅ Successfully processed Day ${targetDay} and synced live to your Smart TV!`;
+              statusDiv.textContent = `✅ Successfully processed Day ${targetDay} and broadcast live to your Smart TV!`;
             } else {
-              throw new Error("HTTP error " + res.status);
+              throw new Error("HTTP " + res.status + " - Check Firebase rules.");
             }
           } catch(err) {
             statusDiv.style.color = "#ef4444";
-            statusDiv.textContent = `⚠️ Processed locally, but Cloud Sync failed: ${err.message}. Check your Firebase URL and database rules.`;
+            statusDiv.textContent = `⚠️ Processed locally, but Cloud broadcast failed: ${err.message}`;
           }
         } else {
-          statusDiv.style.color = "#eab308";
-          statusDiv.textContent = `✅ Processed locally. Enter a Firebase DB URL above to broadcast to your Smart TV.`;
+          statusDiv.style.color = "#ef4444";
+          statusDiv.textContent = `⚠️ Missing Firebase URL! Paste your URL in line 211 of the script.`;
         }
 
-        // 2. Also keep local storage / BroadcastChannel updated for same-device tabs
         localStorage.setItem('atom_tracker_live_data', JSON.stringify(payload));
-        try {
-          new BroadcastChannel('atom_tracker_live_channel').postMessage(payload);
-        } catch(e) {}
+        try { new BroadcastChannel('atom_tracker_live_channel').postMessage(payload); } catch(e) {}
       }
     } catch(err) {
       statusDiv.style.color = "#ef4444";
