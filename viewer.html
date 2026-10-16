@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ATOM Daily Tracker - Report Viewer</title>
+  <title>ATOM Daily Tracker - Smart TV Display</title>
   
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23121212'/><text x='50%' y='68%' font-family='sans-serif' font-weight='900' font-size='52' fill='%23D1C2A5'>DT</text></svg>">
 
@@ -32,49 +32,49 @@
       background-color: var(--bg-color); 
       color: var(--text-main);
       margin: 0;
-      padding: 10px;
+      padding: 16px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      font-size: 14px;
+      font-size: 15px;
     }
 
     .brand-header {
       width: 100%;
-      max-width: 1200px;
-      margin-bottom: 10px;
+      max-width: 1400px;
+      margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 8px;
+      padding-bottom: 10px;
       border-bottom: 1px solid var(--border-color);
     }
 
     .brand-title {
       font-weight: 800;
-      font-size: 16px;
+      font-size: 18px;
       letter-spacing: 1.5px;
       color: var(--brand-beige);
       text-transform: uppercase;
     }
 
     .status-badge {
-      font-size: 10px;
+      font-size: 11px;
       color: #22c55e;
       background: #141414;
-      padding: 3px 8px;
+      padding: 4px 10px;
       border-radius: 12px;
       border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       font-weight: 600;
     }
 
     .status-dot {
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       background-color: #22c55e;
       border-radius: 50%;
       box-shadow: 0 0 6px #22c55e;
@@ -83,16 +83,16 @@
 
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+      50% { opacity: 0.3; transform: scale(0.8); }
     }
 
     .card { 
       background: var(--card-bg); 
-      padding: 12px; 
+      padding: 16px; 
       border-radius: 6px; 
       border: 1px solid var(--border-color);
       width: 100%;
-      max-width: 1200px; 
+      max-width: 1400px; 
       margin-bottom: 12px;
     }
 
@@ -100,14 +100,12 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-      gap: 8px;
+      margin-bottom: 12px;
     }
 
     .card-title {
       margin: 0;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: 0.5px;
       color: var(--text-main);
@@ -119,16 +117,15 @@
     .card-title::before {
       content: '';
       display: inline-block;
-      width: 5px;
-      height: 5px;
+      width: 6px;
+      height: 6px;
       background-color: var(--brand-beige);
       border-radius: 1px;
     }
 
     .report-meta {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-muted);
-      margin-top: 2px;
     }
 
     .table-container {
@@ -150,10 +147,10 @@
     th, td { 
       border-right: 1px solid var(--gs-border);
       border-bottom: 1px solid var(--gs-border);
-      padding: 4px 8px; 
+      padding: 6px 10px; 
       text-align: center !important; 
-      font-size: 13px;
-      line-height: 1.25;
+      font-size: 14px;
+      line-height: 1.3;
       color: var(--gs-text);
       font-variant-numeric: tabular-nums;
     }
@@ -161,9 +158,9 @@
     th { 
       background-color: var(--gs-header-metrics-bg) !important; 
       color: var(--gs-header-text) !important; 
-      padding: 6px 8px; 
+      padding: 8px 10px; 
       font-weight: normal !important;
-      font-size: 13px;
+      font-size: 14px;
     }
 
     th.assignee-header {
@@ -171,12 +168,10 @@
       color: #000000 !important;
       font-style: italic;
       text-align: left !important;
-      font-weight: normal !important;
     }
 
     tr:nth-child(even) td { background-color: var(--gs-row-even); }
     tr:nth-child(odd) td { background-color: var(--gs-row-odd); }
-    tr:hover td { background-color: #e8f0fe; }
 
     .text-left { 
       text-align: left !important; 
@@ -190,27 +185,25 @@
       color: #000000 !important;
       border-top: 2px solid #000000 !important;
       border-bottom: 2px solid #000000 !important;
-      padding: 5px 8px;
-      text-align: center !important;
+      padding: 7px 10px;
     }
 
     .summary-row td.text-left {
-      font-weight: 700 !important;
       text-align: left !important;
     }
 
     .empty-state {
-      padding: 24px;
+      padding: 30px;
       text-align: center;
       color: var(--text-muted);
-      font-size: 12px;
+      font-size: 13px;
       background: #141414;
       border-radius: 4px;
     }
 
     .brand-footer {
       margin-top: 16px;
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-muted);
       letter-spacing: 1px;
       text-transform: uppercase;
@@ -223,16 +216,14 @@
     <div class="brand-title">ATOMS Daily Tracker</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span id="badgeText">Live Auto-Sync Active</span>
+      <span>Auto-Sync Connected</span>
     </div>
   </div>
 
   <div class="card">
     <div class="card-top-bar">
-      <div>
-        <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
-        <div class="report-meta" id="reportMeta">Listening for live updates...</div>
-      </div>
+      <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
+      <div class="report-meta" id="reportMeta">Connecting to cloud sync...</div>
     </div>
 
     <div class="table-container" id="output">
@@ -245,62 +236,38 @@
   </div>
 
 <script>
-let lastKnownHash = "";
+// ENTER YOUR FIREBASE DB URL HERE (or pass it via ?db=URL in the browser bar)
+const HARDCODED_FIREBASE_URL = "";
 
-async function loadData() {
-  const meta = document.getElementById('reportMeta');
-  const output = document.getElementById('output');
+const urlParams = new URLSearchParams(window.location.search);
+const firebaseUrl = (urlParams.get('db') || HARDCODED_FIREBASE_URL || localStorage.getItem('atom_firebase_url') || "").replace(/\/\$/, "");
 
-  // Strategy 1: URL Hash (#data=...)
-  if (window.location.hash.startsWith('#data=')) {
-    try {
-      const rawHash = window.location.hash.replace('#data=', '');
-      const jsonStr = decodeURIComponent(escape(atob(decodeURIComponent(rawHash))));
-      const payload = JSON.parse(jsonStr);
-      displayReport(payload);
-      return;
-    } catch (e) {
-      console.warn("Failed parsing hash data:", e);
-    }
+let lastRenderedChecksum = "";
+
+async function fetchCloudData() {
+  if (!firebaseUrl) {
+    document.getElementById('reportMeta').textContent = "⚠️ Missing Firebase URL. Set it in admin.html or in viewer.html script.";
+    return;
   }
 
-  // Strategy 2: Local storage sync (immediate cross-tab access)
-  const localData = localStorage.getItem('atom_tracker_live_data');
-  if (localData) {
-    try {
-      const payload = JSON.parse(localData);
-      displayReport(payload);
-      return;
-    } catch (e) {
-      console.warn("Failed parsing local storage:", e);
-    }
-  }
-
-  // Strategy 3: GitHub Live repository file (data.json)
   try {
-    const res = await fetch(`./data.json?_nocache=${Date.now()}`);
+    const res = await fetch(`${firebaseUrl}/tracker.json?_nocache=${Date.now()}`);
     if (res.ok) {
       const payload = await res.json();
-      displayReport(payload);
-      return;
+      if (payload && payload.rows) {
+        displayReport(payload);
+      }
     }
-  } catch (e) {
-    // data.json not yet hosted
+  } catch (err) {
+    // If fetch fails temporarily, keep last displayed data active
+    console.warn("Sync polling check error:", err);
   }
-
-  meta.textContent = "No data active — Ready for upload";
-  output.innerHTML = `
-    <div class="empty-state">
-      Waiting for report from Admin.<br>
-      Drag and drop a file on <b>admin.html</b> and this page will update automatically.
-    </div>
-  `;
 }
 
 function displayReport(payload) {
-  const payloadStr = JSON.stringify(payload);
-  if (payloadStr === lastKnownHash) return; // Skip DOM re-render if data is identical
-  lastKnownHash = payloadStr;
+  const currentChecksum = JSON.stringify(payload);
+  if (currentChecksum === lastRenderedChecksum) return; // Prevent unnecessary DOM re-renders
+  lastRenderedChecksum = currentChecksum;
 
   const meta = document.getElementById('reportMeta');
   const title = document.getElementById('reportTitle');
@@ -308,9 +275,9 @@ function displayReport(payload) {
   if (payload.day) {
     title.textContent = `Daily Ticket Summary — Day ${payload.day} (PHT)`;
   }
-  meta.textContent = payload.updatedAt ? `Last updated: ${payload.updatedAt}` : 'Live Report Active';
+  meta.textContent = payload.updatedAt ? `Last Synced: ${payload.updatedAt}` : 'Live';
 
-  renderTable(payload.rows || payload);
+  renderTable(payload.rows);
 }
 
 function renderTable(data) {
@@ -338,44 +305,23 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// 1. INSTANT CROSS-TAB LOCALSTORAGE LISTENER
-window.addEventListener('storage', (event) => {
-  if (event.key === 'atom_tracker_live_data' && event.newValue) {
-    try {
-      displayReport(JSON.parse(event.newValue));
-    } catch(err) {
-      console.error(err);
-    }
+// 1. Initial Load
+fetchCloudData();
+
+// 2. Poll Firebase Cloud every 3 seconds for updates from the Admin
+setInterval(fetchCloudData, 3000);
+
+// 3. Fallback: LocalStorage / BroadcastChannel support for same-computer testing
+window.addEventListener('storage', (e) => {
+  if (e.key === 'atom_tracker_live_data' && e.newValue) {
+    try { displayReport(JSON.parse(e.newValue)); } catch(err) {}
   }
 });
-
-// 2. INSTANT BROADCAST CHANNEL LISTENER
 try {
-  const syncChannel = new BroadcastChannel('atom_tracker_live_channel');
-  syncChannel.onmessage = (event) => {
-    if (event.data) {
-      displayReport(event.data);
-    }
+  new BroadcastChannel('atom_tracker_live_channel').onmessage = (e) => {
+    if (e.data) displayReport(e.data);
   };
-} catch(e) {
-  // BroadcastChannel fallback handled by storage listener
-}
-
-// 3. BACKGROUND AUTO-POLL FOR GITHUB PAGES (Checks every 4 seconds)
-setInterval(async () => {
-  if (!window.location.hash.startsWith('#data=')) {
-    try {
-      const res = await fetch(`./data.json?_nocache=${Date.now()}`);
-      if (res.ok) {
-        const payload = await res.json();
-        displayReport(payload);
-      }
-    } catch (e) {}
-  }
-}, 4000);
-
-window.addEventListener('DOMContentLoaded', loadData);
-window.addEventListener('hashchange', loadData);
+} catch(e) {}
 </script>
 </body>
 </html>
