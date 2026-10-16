@@ -189,6 +189,7 @@
     }
 
     .summary-row td.text-left {
+      font-weight: 700 !important;
       text-align: left !important;
     }
 
@@ -216,14 +217,14 @@
     <div class="brand-title">ATOMS Daily Tracker</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span>Auto-Sync Connected</span>
+      <span id="badgeText">Cloud Connected</span>
     </div>
   </div>
 
   <div class="card">
     <div class="card-top-bar">
       <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
-      <div class="report-meta" id="reportMeta">Connecting to cloud sync...</div>
+      <div class="report-meta" id="reportMeta">Connecting to cloud service...</div>
     </div>
 
     <div class="table-container" id="output">
@@ -236,22 +237,25 @@
   </div>
 
 <script>
-// ENTER YOUR FIREBASE DB URL HERE (or pass it via ?db=URL in the browser bar)
-const HARDCODED_FIREBASE_URL = "";
+// ========================================================
+// 1. SET YOUR FIREBASE DATABASE URL HERE
+// ========================================================
+const FIREBASE_DB_URL = "https://your-project-default-rtdb.firebaseio.com"; 
+// Example: "https://atom-tracker-default-rtdb.firebaseio.com"
 
 const urlParams = new URLSearchParams(window.location.search);
-const firebaseUrl = (urlParams.get('db') || HARDCODED_FIREBASE_URL || localStorage.getItem('atom_firebase_url') || "").replace(/\/\$/, "");
+const firebaseUrl = (FIREBASE_DB_URL || urlParams.get('db') || localStorage.getItem('atom_firebase_url') || "").replace(/\/\$/, "");
 
 let lastRenderedChecksum = "";
 
 async function fetchCloudData() {
-  if (!firebaseUrl) {
-    document.getElementById('reportMeta').textContent = "⚠️ Missing Firebase URL. Set it in admin.html or in viewer.html script.";
+  if (!firebaseUrl || firebaseUrl.includes("your-project-default-rtdb")) {
+    document.getElementById('reportMeta').textContent = "⚠️ Missing Firebase URL in viewer.html script!";
     return;
   }
 
   try {
-    const res = await fetch(`${firebaseUrl}/tracker.json?_nocache=${Date.now()}`);
+    const res = await fetch(`${firebaseUrl}/tracker.json?_ts=${Date.now()}`, { cache: "no-store" });
     if (res.ok) {
       const payload = await res.json();
       if (payload && payload.rows) {
@@ -259,14 +263,13 @@ async function fetchCloudData() {
       }
     }
   } catch (err) {
-    // If fetch fails temporarily, keep last displayed data active
-    console.warn("Sync polling check error:", err);
+    console.warn("Polling retry...", err);
   }
 }
 
 function displayReport(payload) {
   const currentChecksum = JSON.stringify(payload);
-  if (currentChecksum === lastRenderedChecksum) return; // Prevent unnecessary DOM re-renders
+  if (currentChecksum === lastRenderedChecksum) return;
   lastRenderedChecksum = currentChecksum;
 
   const meta = document.getElementById('reportMeta');
@@ -275,7 +278,7 @@ function displayReport(payload) {
   if (payload.day) {
     title.textContent = `Daily Ticket Summary — Day ${payload.day} (PHT)`;
   }
-  meta.textContent = payload.updatedAt ? `Last Synced: ${payload.updatedAt}` : 'Live';
+  meta.textContent = payload.updatedAt ? `Last Synced: ${payload.updatedAt}` : 'Live Report Active';
 
   renderTable(payload.rows);
 }
@@ -305,13 +308,13 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// 1. Initial Load
+// Initial fetch on page load
 fetchCloudData();
 
-// 2. Poll Firebase Cloud every 3 seconds for updates from the Admin
+// Poll Firebase every 3 seconds for automated real-time updates
 setInterval(fetchCloudData, 3000);
 
-// 3. Fallback: LocalStorage / BroadcastChannel support for same-computer testing
+// Local cross-tab backup listener
 window.addEventListener('storage', (e) => {
   if (e.key === 'atom_tracker_live_data' && e.newValue) {
     try { displayReport(JSON.parse(e.newValue)); } catch(err) {}
