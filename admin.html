@@ -292,7 +292,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title">Daily Ticket Summary Processor (OFO Deduplicated)</div>
+    <div class="card-title">Daily Ticket Summary Processor (TL Match / Raw Count)</div>
     <div class="controls">
       <div class="control-group">
         <label><b>Upload CSV File:</b></label>
@@ -322,7 +322,6 @@
   </div>
 
 <script>
-// Zero-setup sync channel tied to your repository
 const SYNC_TOPIC = "ywbisa_atomtools_sync";
 
 function parseCSV(text) {
@@ -380,7 +379,6 @@ csvFileInput.addEventListener('change', () => {
 ['dragenter', 'dragover'].forEach(eventName => {
   dropZone.addEventListener(eventName, (e) => {
     e.preventDefault();
-    e.stopPropagation();
     dropZone.classList.add('dragover');
   }, false);
 });
@@ -424,7 +422,7 @@ function processCSV() {
   }
 
   statusDiv.style.color = "var(--brand-beige)";
-  statusDiv.textContent = "Processing CSV locally with OFO Deduplication...";
+  statusDiv.textContent = "Processing CSV matching TL tracker totals...";
 
   const file = fileInput.files[0];
   const reader = new FileReader();
@@ -435,43 +433,35 @@ function processCSV() {
       const summaryArray = generateSummary(parsedData, targetDay);
       
       if (summaryArray) {
-        // Compact payload format to ensure ultra-fast transmission
         const payload = {
           day: targetDay,
           updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          r: summaryArray.map(item => [
-            item.name,
-            item.successful,
-            item.denied,
-            item.refunded,
-            item.coolOff,
-            item.escalated,
-            item.expired,
-            item.totalDispute,
-            item.winRate
-          ])
+          rows: summaryArray
         };
 
         renderTable(summaryArray);
 
-        // Zero-setup broadcast: sends directly across the internet to your Smart TV
+        // Local browser sync for testing tabs on the same computer
+        localStorage.setItem('atom_tracker_live_data', JSON.stringify(payload));
+        try { new BroadcastChannel('atom_tracker_live_channel').postMessage(payload); } catch(e) {}
+
+        // Broadcast to Smart TV via zero-header POST (no CORS preflight)
         statusDiv.textContent = "Broadcasting data directly to Smart TV...";
         try {
           const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}`, {
             method: 'POST',
-            body: JSON.stringify(payload),
-            headers: { 'Title': 'ATOM Tracker Update' }
+            body: JSON.stringify(payload)
           });
 
           if (res.ok) {
             statusDiv.style.color = "#22c55e";
-            statusDiv.textContent = `✅ Successfully processed Day ${targetDay} and broadcast live to your Smart TV!`;
+            statusDiv.textContent = `✅ Processed Day ${targetDay} and broadcast live! Your Smart TV will display it immediately.`;
           } else {
-            throw new Error("Relay response not OK");
+            throw new Error("Relay response status: " + res.status);
           }
         } catch(err) {
           statusDiv.style.color = "#ef4444";
-          statusDiv.textContent = "⚠️ Processed locally, but broadcast failed. Ensure you have an internet connection.";
+          statusDiv.textContent = "⚠️ Processed locally, but broadcast failed: " + err.message;
         }
       }
     } catch(err) {
@@ -495,15 +485,12 @@ function generateSummary(rows, targetDay) {
   let statusIdx = headers.findIndex(h => h === 'status' || (h.includes('status') && !h.includes('updated')));
   let dateIdx = headers.findIndex(h => h.includes('solved'));
   if (dateIdx === -1) dateIdx = headers.findIndex(h => h.includes('assignee updated') || h.includes('updated'));
-  let ofoIdx = headers.findIndex(h => h.includes('ofo display') || h.includes('ofo'));
 
   if (assigneeIdx === -1) assigneeIdx = 2;
   if (statusIdx === -1) statusIdx = 1;
   if (dateIdx === -1) dateIdx = 13;
-  if (ofoIdx === -1) ofoIdx = 12;
 
   const stats = {};
-  const seenOfoIds = new Set();
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -512,7 +499,6 @@ function generateSummary(rows, targetDay) {
     const assignee = cleanStr(row[assigneeIdx]);
     const status = cleanStr(row[statusIdx]);
     const updatedStr = cleanStr(row[dateIdx]);
-    const ofoId = cleanStr(row[ofoIdx]);
 
     if (!assignee || assignee === '-' || assignee === "'-") continue;
 
@@ -532,12 +518,6 @@ function generateSummary(rows, targetDay) {
       }
     }
     if (rowDay !== targetDay) continue;
-
-    if (ofoId && ofoId !== '-' && ofoId !== "'-") {
-      const ofoKey = ofoId.toLowerCase();
-      if (seenOfoIds.has(ofoKey)) continue;
-      seenOfoIds.add(ofoKey);
-    }
 
     if (!stats[assignee]) {
       stats[assignee] = { successful: 0, denied: 0, refunded: 0, coolOff: 0, escalated: 0, expired: 0 };
