@@ -216,14 +216,16 @@
     <div class="brand-title">ATOMS Daily Tracker</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span id="badgeText">Live Receiver Active</span>
+      <span id="badgeText">Live Receiver Ready</span>
     </div>
   </div>
 
   <div class="card">
     <div class="card-top-bar">
-      <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
-      <div class="report-meta" id="reportMeta">Listening for live updates...</div>
+      <div>
+        <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
+        <div class="report-meta" id="reportMeta">Connecting live stream...</div>
+      </div>
     </div>
 
     <div class="table-container" id="output">
@@ -236,38 +238,82 @@
   </div>
 
 <script>
-// Zero-setup sync channel matching admin.html
 const SYNC_TOPIC = "ywbisa_atomtools_sync";
 let lastChecksum = "";
+let ws = null;
 
-async function checkSync() {
+// 1. PRIMARY: DIRECT WEBSOCKET CONNECTION (Instant push, no CORS, no caching)
+function connectWebSocket() {
   try {
-    const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h`, { cache: 'no-store' });
+    ws = new WebSocket(`wss://ntfy.sh/${SYNC_TOPIC}/ws?since=24h`);
+
+    ws.onopen = () => {
+      document.getElementById('reportMeta').textContent = "Live Stream Connected — Listening for updates";
+    };
+
+    ws.onmessage = (event) => {
+      handleIncomingData(event.data);
+    };
+
+    ws.onclose = () => {
+      setTimeout(connectWebSocket, 4000);
+    };
+
+    ws.onerror = () => {
+      try { ws.close(); } catch(e) {}
+    };
+  } catch(e) {
+    console.warn("WebSocket not supported, relying on clean HTTP fallback.");
+  }
+}
+
+// 2. BACKUP: CLEAN HTTP GET (No custom headers to avoid TV CORS preflight blocks)
+async function fetchFallbackCheck() {
+  try {
+    const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h`);
     if (!res.ok) return;
 
     const rawText = await res.text();
     if (!rawText.trim()) return;
 
-    // Parse the newline-delimited stream to find the latest valid message
     const lines = rawText.trim().split('\n');
     for (let i = lines.length - 1; i >= 0; i--) {
       try {
         const item = JSON.parse(lines[i]);
-        if (item.event === 'message' && item.message) {
-          const payload = JSON.parse(item.message);
-          renderReportFromPayload(payload);
+        if (item.event === 'message') {
+          handleIncomingData(item);
           break;
         }
       } catch(e) {}
     }
   } catch(err) {
-    console.warn("Sync check retry...", err);
+    // Ignore minor network hiccups quietly
+  }
+}
+
+// UNIFIED MESSAGE PROCESSOR
+function handleIncomingData(raw) {
+  try {
+    let payload = raw;
+    if (typeof payload === 'string') {
+      payload = JSON.parse(payload);
+    }
+    // Unwrap from ntfy envelope
+    if (payload && payload.event === 'message' && payload.message) {
+      payload = typeof payload.message === 'string' ? JSON.parse(payload.message) : payload.message;
+    }
+
+    if (payload && (payload.rows || payload.r)) {
+      renderReportFromPayload(payload);
+    }
+  } catch(err) {
+    console.error("Payload parse error:", err);
   }
 }
 
 function renderReportFromPayload(payload) {
   const currentChecksum = JSON.stringify(payload);
-  if (currentChecksum === lastChecksum) return; // Prevent unnecessary DOM re-renders
+  if (currentChecksum === lastChecksum) return; 
   lastChecksum = currentChecksum;
 
   const meta = document.getElementById('reportMeta');
@@ -276,22 +322,26 @@ function renderReportFromPayload(payload) {
   if (payload.day) {
     title.textContent = `Daily Ticket Summary — Day ${payload.day} (PHT)`;
   }
-  meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
+  meta.textContent = payload.updatedAt ? `Last Live Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  // Unpack array-of-arrays into table rows
-  const unpackedRows = payload.r.map(row => ({
-    name: row[0],
-    successful: row[1],
-    denied: row[2],
-    refunded: row[3],
-    coolOff: row[4],
-    escalated: row[5],
-    expired: row[6],
-    totalDispute: row[7],
-    winRate: row[8]
-  }));
+  let rows = [];
+  if (Array.isArray(payload.rows)) {
+    rows = payload.rows;
+  } else if (Array.isArray(payload.r)) {
+    rows = payload.r.map(row => ({
+      name: row[0],
+      successful: row[1],
+      denied: row[2],
+      refunded: row[3],
+      coolOff: row[4],
+      escalated: row[5],
+      expired: row[6],
+      totalDispute: row[7],
+      winRate: row[8]
+    }));
+  }
 
-  renderTable(unpackedRows);
+  renderTable(rows);
 }
 
 function renderTable(data) {
@@ -305,11 +355,24 @@ function renderTable(data) {
   let html = `<table id="summaryTable"><thead><tr><th class="assignee-header">Assignee</th><th>Successful</th><th>Denied</th><th>Already Refunded</th><th>Cool Off</th><th>Escalated</th><th>Expired</th><th>Total Order Disputed</th><th>Winrate</th></tr></thead><tbody>`;
 
   data.forEach(row => {
-    totals.succ += row.successful; totals.den += row.denied; totals.ref += row.refunded;
-    totals.cool += row.coolOff; totals.esc += row.escalated; totals.exp += row.expired;
-    totals.total += row.totalDispute;
+    const s = Number(row.successful) || 0;
+    const d = Number(row.denied) || 0;
+    const r = Number(row.refunded) || 0;
+    const c = Number(row.coolOff) || 0;
+    const e = Number(row.escalated) || 0;
+    const x = Number(row.expired) || 0;
+    const t = Number(row.totalDispute) || (s + d + r + c + e + x);
+    const w = typeof row.winRate === 'number' ? row.winRate.toFixed(2) : parseFloat(row.winRate || 0).toFixed(2);
 
-    html += `<tr><td class="text-left">${row.name}</td><td>${row.successful}</td><td>${row.denied}</td><td>${row.refunded}</td><td>${row.coolOff}</td><td>${row.escalated}</td><td>${row.expired}</td><td>${row.totalDispute}</td><td>${row.winRate.toFixed(2)}%</td></tr>`;
+    totals.succ += s;
+    totals.den += d;
+    totals.ref += r;
+    totals.cool += c;
+    totals.esc += e;
+    totals.exp += x;
+    totals.total += t;
+
+    html += `<tr><td class="text-left">${row.name}</td><td>${s}</td><td>${d}</td><td>${r}</td><td>${c}</td><td>${e}</td><td>${x}</td><td>${t}</td><td>${w}%</td></tr>`;
   });
 
   const overallWinRateDenom = totals.succ + totals.den + totals.cool;
@@ -319,11 +382,24 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// Initial check on load
-checkSync();
+// Start WebSocket connection for instant push
+connectWebSocket();
 
-// Poll every 3 seconds so the Smart TV automatically updates without user interaction
-setInterval(checkSync, 3000);
+// Run immediate fallback HTTP check + poll every 5s gently
+fetchFallbackCheck();
+setInterval(fetchFallbackCheck, 5000);
+
+// Local browser sync for testing tabs on the same computer
+window.addEventListener('storage', (e) => {
+  if (e.key === 'atom_tracker_live_data' && e.newValue) {
+    try { handleIncomingData(JSON.parse(e.newValue)); } catch(err) {}
+  }
+});
+try {
+  new BroadcastChannel('atom_tracker_live_channel').onmessage = (e) => {
+    if (e.data) handleIncomingData(e.data);
+  };
+} catch(e) {}
 </script>
 </body>
 </html>
