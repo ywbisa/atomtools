@@ -216,14 +216,14 @@
     <div class="brand-title">ATOMS Daily Tracker</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span id="badgeText">Live Auto-Update Active</span>
+      <span id="badgeText">Live Sync Active</span>
     </div>
   </div>
 
   <div class="card">
     <div class="card-top-bar">
       <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
-      <div class="report-meta" id="reportMeta">Connecting live stream...</div>
+      <div class="report-meta" id="reportMeta">Connecting to live feed...</div>
     </div>
 
     <div class="table-container" id="output">
@@ -238,71 +238,58 @@
 <script>
 const SYNC_TOPIC = "ywbisa_atomtools_sync";
 let lastChecksum = "";
-let sseConnection = null;
 
-// 1. REAL-TIME DATA STREAM (Pushes updates to TV immediately upon upload)
-function startLiveStream() {
-  if (sseConnection) {
-    try { sseConnection.close(); } catch(e) {}
-  }
+// Robust network check with no custom headers to prevent TV CORS preflight issues
+function fetchCloudData() {
+  const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_nocache=${Date.now()}`;
 
-  try {
-    sseConnection = new EventSource(`https://ntfy.sh/${SYNC_TOPIC}/sse?since=24h`);
-
-    sseConnection.onmessage = (event) => {
-      try {
-        const item = JSON.parse(event.data);
-        if (item.event === 'message' && item.message) {
-          const payload = JSON.parse(item.message);
-          renderReportFromPayload(payload);
-        }
-      } catch(e) {}
-    };
-
-    sseConnection.onerror = () => {
-      // Re-establish socket automatically if TV network drops temporarily
-      setTimeout(startLiveStream, 5000);
-    };
-  } catch(e) {
-    console.warn("EventSource not supported by TV browser, using anti-cache polling.");
+  // Try standard fetch first
+  if (typeof fetch === 'function') {
+    fetch(url)
+      .then(res => {
+        if (res.ok) return res.text();
+        throw new Error('Network response not ok');
+      })
+      .then(text => processRawResponse(text))
+      .catch(() => tryXHRFallback(url));
+  } else {
+    tryXHRFallback(url);
   }
 }
 
-// 2. ANTI-CACHE POLLING (Guarantees fresh check every 3s without caching)
-async function fetchAntiCacheCheck() {
+// Fallback for older Smart TV browsers that have incomplete fetch implementations
+function tryXHRFallback(url) {
   try {
-    const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_ts=${Date.now()}`;
-    const res = await fetch(url, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        processRawResponse(xhr.responseText);
       }
-    });
+    };
+    xhr.send();
+  } catch(e) {}
+}
 
-    if (!res.ok) return;
+function processRawResponse(rawText) {
+  if (!rawText || !rawText.trim()) return;
 
-    const rawText = await res.text();
-    if (!rawText.trim()) return;
-
-    const lines = rawText.trim().split('\n');
-    for (let i = lines.length - 1; i >= 0; i--) {
-      try {
-        const item = JSON.parse(lines[i]);
-        if (item.event === 'message' && item.message) {
-          const payload = JSON.parse(item.message);
-          renderReportFromPayload(payload);
-          break;
-        }
-      } catch(e) {}
-    }
-  } catch(err) {
-    console.warn("Background check retry...", err);
+  const lines = rawText.trim().split('\n');
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const item = JSON.parse(lines[i]);
+      if (item.event === 'message' && item.message) {
+        const payload = (typeof item.message === 'string') ? JSON.parse(item.message) : item.message;
+        renderReportFromPayload(payload);
+        break;
+      }
+    } catch(e) {}
   }
 }
 
 function renderReportFromPayload(payload) {
+  if (!payload) return;
+
   const currentChecksum = JSON.stringify(payload);
   if (currentChecksum === lastChecksum) return; 
   lastChecksum = currentChecksum;
@@ -315,19 +302,25 @@ function renderReportFromPayload(payload) {
   }
   meta.textContent = payload.updatedAt ? `Last Live Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  const unpackedRows = payload.r.map(row => ({
-    name: row[0],
-    successful: row[1],
-    denied: row[2],
-    refunded: row[3],
-    coolOff: row[4],
-    escalated: row[5],
-    expired: row[6],
-    totalDispute: row[7],
-    winRate: row[8]
-  }));
+  // Support both object rows and compact r-arrays
+  let rows = [];
+  if (Array.isArray(payload.rows)) {
+    rows = payload.rows;
+  } else if (Array.isArray(payload.r)) {
+    rows = payload.r.map(row => ({
+      name: row[0],
+      successful: row[1],
+      denied: row[2],
+      refunded: row[3],
+      coolOff: row[4],
+      escalated: row[5],
+      expired: row[6],
+      totalDispute: row[7],
+      winRate: row[8]
+    }));
+  }
 
-  renderTable(unpackedRows);
+  renderTable(rows);
 }
 
 function renderTable(data) {
@@ -341,11 +334,24 @@ function renderTable(data) {
   let html = `<table id="summaryTable"><thead><tr><th class="assignee-header">Assignee</th><th>Successful</th><th>Denied</th><th>Already Refunded</th><th>Cool Off</th><th>Escalated</th><th>Expired</th><th>Total Order Disputed</th><th>Winrate</th></tr></thead><tbody>`;
 
   data.forEach(row => {
-    totals.succ += row.successful; totals.den += row.denied; totals.ref += row.refunded;
-    totals.cool += row.coolOff; totals.esc += row.escalated; totals.exp += row.expired;
-    totals.total += row.totalDispute;
+    const s = Number(row.successful) || 0;
+    const d = Number(row.denied) || 0;
+    const r = Number(row.refunded) || 0;
+    const c = Number(row.coolOff) || 0;
+    const e = Number(row.escalated) || 0;
+    const x = Number(row.expired) || 0;
+    const t = Number(row.totalDispute) || (s + d + r + c + e + x);
+    const w = typeof row.winRate === 'number' ? row.winRate.toFixed(2) : parseFloat(row.winRate || 0).toFixed(2);
 
-    html += `<tr><td class="text-left">${row.name}</td><td>${row.successful}</td><td>${row.denied}</td><td>${row.refunded}</td><td>${row.coolOff}</td><td>${row.escalated}</td><td>${row.expired}</td><td>${row.totalDispute}</td><td>${row.winRate.toFixed(2)}%</td></tr>`;
+    totals.succ += s;
+    totals.den += d;
+    totals.ref += r;
+    totals.cool += c;
+    totals.esc += e;
+    totals.exp += x;
+    totals.total += t;
+
+    html += `<tr><td class="text-left">${row.name}</td><td>${s}</td><td>${d}</td><td>${r}</td><td>${c}</td><td>${e}</td><td>${x}</td><td>${t}</td><td>${w}%</td></tr>`;
   });
 
   const overallWinRateDenom = totals.succ + totals.den + totals.cool;
@@ -355,12 +361,23 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// Start real-time stream
-startLiveStream();
+// 1. Initial check immediately upon opening
+fetchCloudData();
 
-// Initial check + continuous 3-second anti-cache polling
-fetchAntiCacheCheck();
-setInterval(fetchAntiCacheCheck, 3000);
+// 2. Continuous check every 2.5 seconds with unique timestamp to bypass Smart TV cache
+setInterval(fetchCloudData, 2500);
+
+// 3. Same-machine local storage listener (if tested across tabs on a laptop)
+window.addEventListener('storage', (e) => {
+  if (e.key === 'atom_tracker_live_data' && e.newValue) {
+    try { renderReportFromPayload(JSON.parse(e.newValue)); } catch(err) {}
+  }
+});
+try {
+  new BroadcastChannel('atom_tracker_live_channel').onmessage = (e) => {
+    if (e.data) renderReportFromPayload(e.data);
+  };
+} catch(e) {}
 </script>
 </body>
 </html>
