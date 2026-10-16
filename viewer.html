@@ -325,7 +325,9 @@ function renderTable(data) {
     const c = Number(row.coolOff) || 0;
     const e = Number(row.escalated) || 0;
     const x = Number(row.expired) || 0;
-    const t = Number(row.totalDispute) || (s + d + r + c + e + x);
+    
+    // FIX: EXPIRED is EXCLUDED from Total Order Disputed
+    const t = Number(row.totalDispute) || (s + d + r + c + e); 
     const w = typeof row.winRate === 'number' ? row.winRate.toFixed(2) : parseFloat(row.winRate || 0).toFixed(2);
 
     totals.succ += s;
