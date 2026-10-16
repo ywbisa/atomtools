@@ -112,6 +112,35 @@
       border-radius: 1px;
     }
 
+    .cloud-bar {
+      background: #111111;
+      border: 1px solid var(--border-color);
+      padding: 8px 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .cloud-bar label {
+      color: var(--brand-beige);
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .cloud-bar input {
+      flex: 1;
+      background: #080808;
+      border: 1px solid #333333;
+      color: #ffffff;
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      outline: none;
+    }
+
     .controls { 
       display: flex; 
       gap: 10px; 
@@ -181,7 +210,7 @@
       background-color: var(--brand-beige); 
       color: #080808; 
       border: none; 
-      padding: 0 12px; 
+      padding: 0 14px; 
       border-radius: 4px; 
       cursor: pointer; 
       font-weight: 700; 
@@ -192,22 +221,10 @@
 
     button:hover { opacity: 0.85; }
 
-    .btn-secondary {
-      background-color: #262626;
-      color: var(--brand-beige);
-      border: 1px solid var(--border-color);
-    }
-
     .btn-copy {
       background-color: #0284c7;
       color: #ffffff;
-    }
-
-    .btn-group {
-      display: flex;
-      gap: 6px;
       margin-left: auto;
-      flex-wrap: wrap;
     }
 
     #status { 
@@ -299,13 +316,19 @@
     <div class="brand-title">ATOMS Daily Tracker — Admin Console</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span>Admin Publishing Mode</span>
+      <span>Admin Live Mode</span>
     </div>
   </div>
 
   <div class="card">
+    <div class="card-title">Cloud Synchronization Settings</div>
+    <div class="cloud-bar">
+      <label>Firebase DB URL:</label>
+      <input type="text" id="firebaseUrl" placeholder="https://your-project-default-rtdb.firebaseio.com">
+      <button onclick="saveFirebaseUrl()">Save</button>
+    </div>
+
     <div class="card-title">Daily Ticket Summary Processor (OFO Deduplicated)</div>
-    
     <div class="controls">
       <div class="control-group">
         <label><b>Upload CSV File:</b></label>
@@ -320,13 +343,8 @@
         <input type="number" id="targetDay" value="" min="1" max="31">
       </div>
 
-      <button onclick="processCSV()">Process Daily Report</button>
-
-      <div class="btn-group">
-        <button class="btn-copy" id="copyBtn" onclick="copyTableToClipboard()">📋 Copy Image</button>
-        <button class="btn-secondary" id="shareBtn" onclick="copyViewerLink()" disabled>🔗 Copy Viewer Link</button>
-        <button class="btn-secondary" id="downloadBtn" onclick="downloadJSON()" disabled>💾 Download data.json</button>
-      </div>
+      <button onclick="processCSV()">Process & Sync to TV</button>
+      <button class="btn-copy" id="copyBtn" onclick="copyTableToClipboard()">📋 Copy Image</button>
     </div>
 
     <div id="status"></div>
@@ -340,7 +358,16 @@
   </div>
 
 <script>
-let lastProcessedPayload = null;
+// Load saved Firebase URL or set a default
+const firebaseUrlInput = document.getElementById('firebaseUrl');
+const savedDb = localStorage.getItem('atom_firebase_url') || '';
+firebaseUrlInput.value = savedDb;
+
+function saveFirebaseUrl() {
+  let val = firebaseUrlInput.value.trim().replace(/\/\$/, "");
+  localStorage.setItem('atom_firebase_url', val);
+  alert("Firebase URL saved!");
+}
 
 function parseCSV(text) {
   const rows = [];
@@ -390,7 +417,6 @@ const csvFileInput = document.getElementById('csvFile');
 const dropZoneText = document.getElementById('dropZoneText');
 
 dropZone.addEventListener('click', () => csvFileInput.click());
-
 csvFileInput.addEventListener('change', () => {
   if (csvFileInput.files.length) updateDropZoneLabel(csvFileInput.files[0].name);
 });
@@ -398,7 +424,6 @@ csvFileInput.addEventListener('change', () => {
 ['dragenter', 'dragover'].forEach(eventName => {
   dropZone.addEventListener(eventName, (e) => {
     e.preventDefault();
-    e.stopPropagation();
     dropZone.classList.add('dragover');
   }, false);
 });
@@ -406,7 +431,6 @@ csvFileInput.addEventListener('change', () => {
 ['dragleave', 'drop'].forEach(eventName => {
   dropZone.addEventListener(eventName, (e) => {
     e.preventDefault();
-    e.stopPropagation();
     dropZone.classList.remove('dragover');
   }, false);
 });
@@ -448,30 +472,50 @@ function processCSV() {
   const file = fileInput.files[0];
   const reader = new FileReader();
 
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const parsedData = parseCSV(e.target.result);
       const summaryArray = generateSummary(parsedData, targetDay);
       
       if (summaryArray) {
-        lastProcessedPayload = {
+        const payload = {
           day: targetDay,
-          updatedAt: new Date().toLocaleString(),
+          updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           rows: summaryArray
         };
 
-       localStorage.setItem('atom_tracker_live_data', JSON.stringify(lastProcessedPayload));
-try {
-  new BroadcastChannel('atom_tracker_live_channel').postMessage(lastProcessedPayload);
-} catch(e) {}
-        
-
-        document.getElementById('shareBtn').disabled = false;
-        document.getElementById('downloadBtn').disabled = false;
-
-        statusDiv.style.color = "#22c55e";
-        statusDiv.textContent = `✅ Processed Day ${targetDay}. Table updated and stored locally!`;
         renderTable(summaryArray);
+
+        // 1. Sync to Cloud (Firebase) for Smart TV
+        const firebaseUrl = firebaseUrlInput.value.trim().replace(/\/\$/, "");
+        if (firebaseUrl) {
+          statusDiv.textContent = "Syncing payload to Smart TV via Cloud...";
+          try {
+            const res = await fetch(`${firebaseUrl}/tracker.json`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+              statusDiv.style.color = "#22c55e";
+              statusDiv.textContent = `✅ Successfully processed Day ${targetDay} and synced live to your Smart TV!`;
+            } else {
+              throw new Error("HTTP error " + res.status);
+            }
+          } catch(err) {
+            statusDiv.style.color = "#ef4444";
+            statusDiv.textContent = `⚠️ Processed locally, but Cloud Sync failed: ${err.message}. Check your Firebase URL and database rules.`;
+          }
+        } else {
+          statusDiv.style.color = "#eab308";
+          statusDiv.textContent = `✅ Processed locally. Enter a Firebase DB URL above to broadcast to your Smart TV.`;
+        }
+
+        // 2. Also keep local storage / BroadcastChannel updated for same-device tabs
+        localStorage.setItem('atom_tracker_live_data', JSON.stringify(payload));
+        try {
+          new BroadcastChannel('atom_tracker_live_channel').postMessage(payload);
+        } catch(e) {}
       }
     } catch(err) {
       statusDiv.style.color = "#ef4444";
@@ -557,12 +601,7 @@ function generateSummary(rows, targetDay) {
     const winRateDenom = s.successful + s.denied + s.coolOff;
     const winRate = winRateDenom > 0 ? (s.successful / winRateDenom * 100).toFixed(2) : "0.00";
 
-    return { 
-      name, 
-      ...s, 
-      totalDispute, 
-      winRate: parseFloat(winRate)
-    };
+    return { name, ...s, totalDispute, winRate: parseFloat(winRate) };
   }).sort((a, b) => b.totalDispute - a.totalDispute);
 }
 
@@ -591,44 +630,10 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// GENERATE SHARABLE LINK FOR VIEWER
-function copyViewerLink() {
-  if (!lastProcessedPayload) return;
-  const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(lastProcessedPayload)))));
-  
-  // Construct viewer URL relative to current location
-  const currentUrl = window.location.href.split('admin.html')[0].split('#')[0].split('?')[0];
-  const viewerUrl = `${currentUrl}viewer.html#data=${encoded}`;
-
-  navigator.clipboard.writeText(viewerUrl).then(() => {
-    const btn = document.getElementById('shareBtn');
-    btn.textContent = "✅ Link Copied!";
-    setTimeout(() => { btn.textContent = "🔗 Copy Viewer Link"; }, 3000);
-  }).catch(() => {
-    prompt("Copy this direct viewer URL:", viewerUrl);
-  });
-}
-
-// DOWNLOAD DATA.JSON TO COMMIT TO GITHUB REPO
-function downloadJSON() {
-  if (!lastProcessedPayload) return;
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastProcessedPayload, null, 2));
-  const downloadAnchor = document.createElement('a');
-  downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", "data.json");
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
-}
-
 async function copyTableToClipboard() {
   const table = document.getElementById('summaryTable');
   const btn = document.getElementById('copyBtn');
-
-  if (!table) {
-    alert("Please process a CSV file first!");
-    return;
-  }
+  if (!table) return alert("Please process a CSV file first!");
 
   try {
     btn.textContent = "⏳ Copying...";
@@ -639,7 +644,7 @@ async function copyTableToClipboard() {
       setTimeout(() => { btn.textContent = "📋 Copy Image"; }, 3000);
     }, 'image/png');
   } catch (err) {
-    alert("Clipboard permission denied or copy failed.");
+    alert("Clipboard copy failed.");
     btn.textContent = "📋 Copy Image";
   }
 }
