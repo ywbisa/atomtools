@@ -521,7 +521,7 @@ function generateSummary(rows, targetDay) {
     }
     if (rowDay !== targetDay) continue;
 
-    // Direct row tally to match team leader Google Sheet (no OFO deduplication)
+    // Direct row tally to match team leader Google Sheet
     if (!stats[assignee]) {
       stats[assignee] = { successful: 0, denied: 0, refunded: 0, coolOff: 0, escalated: 0, expired: 0 };
     }
@@ -537,7 +537,8 @@ function generateSummary(rows, targetDay) {
 
   return Object.keys(stats).map(name => {
     const s = stats[name];
-    const totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated + s.expired;
+    // FIX: EXPIRED is EXCLUDED from Total Order Disputed
+    const totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated; 
     const winRateDenom = s.successful + s.denied + s.coolOff;
     const winRate = winRateDenom > 0 ? (s.successful / winRateDenom * 100).toFixed(2) : "0.00";
 
