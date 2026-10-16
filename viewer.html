@@ -6,7 +6,6 @@
   <title>ATOM Daily Tracker - Report Viewer</title>
   
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23121212'/><text x='50%' y='68%' font-family='sans-serif' font-weight='900' font-size='52' fill='%23D1C2A5'>DT</text></svg>">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
     :root {
@@ -74,11 +73,17 @@
     }
 
     .status-dot {
-      width: 5px;
-      height: 5px;
+      width: 6px;
+      height: 6px;
       background-color: #22c55e;
       border-radius: 50%;
-      box-shadow: 0 0 4px #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
     }
 
     .card { 
@@ -123,22 +128,8 @@
     .report-meta {
       font-size: 11px;
       color: var(--text-muted);
+      margin-top: 2px;
     }
-
-    button { 
-      background-color: #0284c7; 
-      color: #ffffff; 
-      border: none; 
-      padding: 0 14px; 
-      border-radius: 4px; 
-      cursor: pointer; 
-      font-weight: 700; 
-      font-size: 11px; 
-      height: 30px;
-      transition: opacity 0.2s ease;
-    }
-
-    button:hover { opacity: 0.85; }
 
     .table-container {
       width: 100%;
@@ -232,7 +223,7 @@
     <div class="brand-title">ATOMS Daily Tracker</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span id="badgeText">Live Viewer</span>
+      <span id="badgeText">Live Auto-Sync Active</span>
     </div>
   </div>
 
@@ -240,13 +231,12 @@
     <div class="card-top-bar">
       <div>
         <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
-        <div class="report-meta" id="reportMeta">Loading latest data...</div>
+        <div class="report-meta" id="reportMeta">Listening for live updates...</div>
       </div>
-      <button id="copyBtn" onclick="copyTableToClipboard()">📋 Copy Image to Clipboard</button>
     </div>
 
     <div class="table-container" id="output">
-      <div class="empty-state">Loading table data...</div>
+      <div class="empty-state">Waiting for report upload from Admin...</div>
     </div>
   </div>
 
@@ -255,12 +245,13 @@
   </div>
 
 <script>
+let lastKnownHash = "";
+
 async function loadData() {
   const meta = document.getElementById('reportMeta');
-  const title = document.getElementById('reportTitle');
   const output = document.getElementById('output');
 
-  // Strategy 1: Check URL hash parameter (#data=...)
+  // Strategy 1: URL Hash (#data=...)
   if (window.location.hash.startsWith('#data=')) {
     try {
       const rawHash = window.location.hash.replace('#data=', '');
@@ -273,7 +264,7 @@ async function loadData() {
     }
   }
 
-  // Strategy 2: Check localStorage (same machine / test session)
+  // Strategy 2: Local storage sync (immediate cross-tab access)
   const localData = localStorage.getItem('atom_tracker_live_data');
   if (localData) {
     try {
@@ -285,40 +276,39 @@ async function loadData() {
     }
   }
 
-  // Strategy 3: Check committed data.json file on GitHub Pages
+  // Strategy 3: GitHub Live repository file (data.json)
   try {
-    const res = await fetch('./data.json', { cache: 'no-store' });
+    const res = await fetch(`./data.json?_nocache=${Date.now()}`);
     if (res.ok) {
       const payload = await res.json();
       displayReport(payload);
       return;
     }
   } catch (e) {
-    console.log("No data.json found on server.");
+    // data.json not yet hosted
   }
 
-  // Fallback: No data available
-  meta.textContent = "No data active";
+  meta.textContent = "No data active — Ready for upload";
   output.innerHTML = `
     <div class="empty-state">
-      No report has been published yet.<br><br>
-      Please open this page via an <b>Admin share link</b> or place <b>data.json</b> in your GitHub repository.
+      Waiting for report from Admin.<br>
+      Drag and drop a file on <b>admin.html</b> and this page will update automatically.
     </div>
   `;
 }
 
 function displayReport(payload) {
+  const payloadStr = JSON.stringify(payload);
+  if (payloadStr === lastKnownHash) return; // Skip DOM re-render if data is identical
+  lastKnownHash = payloadStr;
+
   const meta = document.getElementById('reportMeta');
   const title = document.getElementById('reportTitle');
 
   if (payload.day) {
     title.textContent = `Daily Ticket Summary — Day ${payload.day} (PHT)`;
   }
-  if (payload.updatedAt) {
-    meta.textContent = `Last published: ${payload.updatedAt}`;
-  } else {
-    meta.textContent = 'Active Report';
-  }
+  meta.textContent = payload.updatedAt ? `Last updated: ${payload.updatedAt}` : 'Live Report Active';
 
   renderTable(payload.rows || payload);
 }
@@ -348,28 +338,41 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-async function copyTableToClipboard() {
-  const table = document.getElementById('summaryTable');
-  const btn = document.getElementById('copyBtn');
-
-  if (!table) {
-    alert("No table available to copy!");
-    return;
+// 1. INSTANT CROSS-TAB LOCALSTORAGE LISTENER
+window.addEventListener('storage', (event) => {
+  if (event.key === 'atom_tracker_live_data' && event.newValue) {
+    try {
+      displayReport(JSON.parse(event.newValue));
+    } catch(err) {
+      console.error(err);
+    }
   }
+});
 
-  try {
-    btn.textContent = "⏳ Copying...";
-    const canvas = await html2canvas(table, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
-    canvas.toBlob(async (blob) => {
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      btn.textContent = "✅ Copied to Clipboard!";
-      setTimeout(() => { btn.textContent = "📋 Copy Image to Clipboard"; }, 3000);
-    }, 'image/png');
-  } catch (err) {
-    alert("Unable to copy to clipboard directly.");
-    btn.textContent = "📋 Copy Image to Clipboard";
-  }
+// 2. INSTANT BROADCAST CHANNEL LISTENER
+try {
+  const syncChannel = new BroadcastChannel('atom_tracker_live_channel');
+  syncChannel.onmessage = (event) => {
+    if (event.data) {
+      displayReport(event.data);
+    }
+  };
+} catch(e) {
+  // BroadcastChannel fallback handled by storage listener
 }
+
+// 3. BACKGROUND AUTO-POLL FOR GITHUB PAGES (Checks every 4 seconds)
+setInterval(async () => {
+  if (!window.location.hash.startsWith('#data=')) {
+    try {
+      const res = await fetch(`./data.json?_nocache=${Date.now()}`);
+      if (res.ok) {
+        const payload = await res.json();
+        displayReport(payload);
+      }
+    } catch (e) {}
+  }
+}, 4000);
 
 window.addEventListener('DOMContentLoaded', loadData);
 window.addEventListener('hashchange', loadData);
