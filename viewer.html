@@ -126,6 +126,7 @@
     .report-meta {
       font-size: 12px;
       color: var(--text-muted);
+      margin-top: 3px;
     }
 
     .table-container {
@@ -216,7 +217,7 @@
     <div class="brand-title">ATOMS Daily Tracker</div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span id="badgeText">Live Receiver Ready</span>
+      <span id="badgeText">Live Auto-Sync Active</span>
     </div>
   </div>
 
@@ -224,7 +225,7 @@
     <div class="card-top-bar">
       <div>
         <div class="card-title" id="reportTitle">Daily Ticket Summary</div>
-        <div class="report-meta" id="reportMeta">Connecting live stream...</div>
+        <div class="report-meta" id="reportMeta">Connecting to live feed...</div>
       </div>
     </div>
 
@@ -238,82 +239,61 @@
   </div>
 
 <script>
-const SYNC_TOPIC = "ywbisa_atomtools_sync";
+const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 let lastChecksum = "";
-let ws = null;
 
-// 1. PRIMARY: DIRECT WEBSOCKET CONNECTION (Instant push, no CORS, no caching)
-function connectWebSocket() {
-  try {
-    ws = new WebSocket(`wss://ntfy.sh/${SYNC_TOPIC}/ws?since=24h`);
+// TV-Optimized Polling Engine: Appends timestamp to guarantee fresh network requests without cache lockups
+function pollCloudData() {
+  const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_t=${Date.now()}`;
 
-    ws.onopen = () => {
-      document.getElementById('reportMeta').textContent = "Live Stream Connected — Listening for updates";
-    };
-
-    ws.onmessage = (event) => {
-      handleIncomingData(event.data);
-    };
-
-    ws.onclose = () => {
-      setTimeout(connectWebSocket, 4000);
-    };
-
-    ws.onerror = () => {
-      try { ws.close(); } catch(e) {}
-    };
-  } catch(e) {
-    console.warn("WebSocket not supported, relying on clean HTTP fallback.");
+  if (typeof fetch === 'function') {
+    fetch(url)
+      .then(res => {
+        if (!res.ok) throw new Error("Status " + res.status);
+        return res.text();
+      })
+      .then(text => processResponse(text))
+      .catch(() => tryXHR(url));
+  } else {
+    tryXHR(url);
   }
 }
 
-// 2. BACKUP: CLEAN HTTP GET (No custom headers to avoid TV CORS preflight blocks)
-async function fetchFallbackCheck() {
+// Built-in fallback for older Smart TV webviews
+function tryXHR(url) {
   try {
-    const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h`);
-    if (!res.ok) return;
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        processResponse(xhr.responseText);
+      }
+    };
+    xhr.send();
+  } catch(e) {}
+}
 
-    const rawText = await res.text();
-    if (!rawText.trim()) return;
+function processResponse(rawText) {
+  if (!rawText || !rawText.trim()) return;
 
-    const lines = rawText.trim().split('\n');
-    for (let i = lines.length - 1; i >= 0; i--) {
-      try {
-        const item = JSON.parse(lines[i]);
-        if (item.event === 'message') {
-          handleIncomingData(item);
-          break;
-        }
-      } catch(e) {}
-    }
-  } catch(err) {
-    // Ignore minor network hiccups quietly
+  const lines = rawText.trim().split('\n');
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const item = JSON.parse(lines[i]);
+      if (item.event === 'message' && item.message) {
+        const payload = (typeof item.message === 'string') ? JSON.parse(item.message) : item.message;
+        renderReport(payload);
+        break;
+      }
+    } catch(e) {}
   }
 }
 
-// UNIFIED MESSAGE PROCESSOR
-function handleIncomingData(raw) {
-  try {
-    let payload = raw;
-    if (typeof payload === 'string') {
-      payload = JSON.parse(payload);
-    }
-    // Unwrap from ntfy envelope
-    if (payload && payload.event === 'message' && payload.message) {
-      payload = typeof payload.message === 'string' ? JSON.parse(payload.message) : payload.message;
-    }
+function renderReport(payload) {
+  if (!payload) return;
 
-    if (payload && (payload.rows || payload.r)) {
-      renderReportFromPayload(payload);
-    }
-  } catch(err) {
-    console.error("Payload parse error:", err);
-  }
-}
-
-function renderReportFromPayload(payload) {
   const currentChecksum = JSON.stringify(payload);
-  if (currentChecksum === lastChecksum) return; 
+  if (currentChecksum === lastChecksum) return; // Prevent unnecessary DOM flicker
   lastChecksum = currentChecksum;
 
   const meta = document.getElementById('reportMeta');
@@ -324,23 +304,7 @@ function renderReportFromPayload(payload) {
   }
   meta.textContent = payload.updatedAt ? `Last Live Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  let rows = [];
-  if (Array.isArray(payload.rows)) {
-    rows = payload.rows;
-  } else if (Array.isArray(payload.r)) {
-    rows = payload.r.map(row => ({
-      name: row[0],
-      successful: row[1],
-      denied: row[2],
-      refunded: row[3],
-      coolOff: row[4],
-      escalated: row[5],
-      expired: row[6],
-      totalDispute: row[7],
-      winRate: row[8]
-    }));
-  }
-
+  const rows = payload.rows || [];
   renderTable(rows);
 }
 
@@ -382,22 +346,21 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// Start WebSocket connection for instant push
-connectWebSocket();
+// Check immediately on load
+pollCloudData();
 
-// Run immediate fallback HTTP check + poll every 5s gently
-fetchFallbackCheck();
-setInterval(fetchFallbackCheck, 5000);
+// Poll every 4 seconds: guaranteed to trigger fresh data without manual refresh or hitting rate limits
+setInterval(pollCloudData, 4000);
 
-// Local browser sync for testing tabs on the same computer
+// Same-browser tab listener (for local testing on laptop)
 window.addEventListener('storage', (e) => {
   if (e.key === 'atom_tracker_live_data' && e.newValue) {
-    try { handleIncomingData(JSON.parse(e.newValue)); } catch(err) {}
+    try { renderReport(JSON.parse(e.newValue)); } catch(err) {}
   }
 });
 try {
   new BroadcastChannel('atom_tracker_live_channel').onmessage = (e) => {
-    if (e.data) handleIncomingData(e.data);
+    if (e.data) renderReport(e.data);
   };
 } catch(e) {}
 </script>
