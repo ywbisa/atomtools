@@ -13,20 +13,17 @@
       --card-bg: #121215;
       --border-color: #27272a;
       --brand-beige: #e2d4bc;
-      --brand-accent: #38bdf8;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       
-      /* Crisp TV Spreadsheet Colors */
-      --gs-header-assignee-bg: #c7d8ed;
-      --gs-header-metrics-bg: #5f7a9f;
-      --gs-header-total-bg: #3f587a;
-      --gs-row-even: #f8fafc;
+      /* Google Sheets Palette */
+      --gs-header-assignee-bg: #dbe5f1;
+      --gs-header-metrics-bg: #7b92b3;
+      --gs-row-even: #f3f3f3;
       --gs-row-odd: #ffffff;
-      --gs-border: #cbd5e1;
-      --gs-text: #0f172a;
-      --gs-total-bg: #1e293b;
-      --gs-winrate-accent: #15803d;
+      --gs-border: #d9d9d9;
+      --gs-total-bg: #e0e0e0;
+      --gs-winrate-accent: #15803d; /* Only non-black text color */
     }
 
     * { box-sizing: border-box; }
@@ -109,7 +106,7 @@
       50% { opacity: 0.4; transform: scale(0.85); }
     }
 
-    /* MAIN TV CARD CONTAINER (EXPANDED TO FULL WIDTH) */
+    /* MAIN TV CARD CONTAINER (FULL WIDTH) */
     .card { 
       background: var(--card-bg); 
       padding: 14px 18px; 
@@ -159,14 +156,13 @@
       border: 1px solid #27272a;
     }
 
-    /* DISTANCE-READABLE SPREADSHEET TABLE */
+    /* FULL WIDTH TABLE CONTAINER */
     .table-container {
       width: 100%;
       overflow-x: hidden;
       background-color: #ffffff;
-      border-radius: 6px;
-      border: 2px solid #64748b;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      border: 1px solid var(--gs-border);
     }
 
     table { 
@@ -177,39 +173,34 @@
       font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
     }
 
+    /* ALL TABLE CELLS DEFAULT TO PURE BLACK TEXT */
     th, td { 
-      border-right: 1.5px solid var(--gs-border);
-      border-bottom: 1.5px solid var(--gs-border);
-      padding: 10px 12px; 
+      border-right: 1px solid var(--gs-border);
+      border-bottom: 1px solid var(--gs-border);
+      padding: 8px 10px; 
       text-align: center !important; 
-      font-size: 19px; /* Large, distance readable font */
+      font-size: 19px;
       line-height: 1.25;
-      color: var(--gs-text);
+      color: #000000 !important;
       font-variant-numeric: tabular-nums;
     }
 
     th { 
       background-color: var(--gs-header-metrics-bg) !important; 
       color: #ffffff !important; 
-      padding: 12px 10px; 
-      font-weight: 800 !important;
+      padding: 10px 8px; 
+      font-weight: normal !important;
       font-size: 17px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     th.assignee-header {
       background-color: var(--gs-header-assignee-bg) !important;
-      color: #0f172a !important;
+      color: #000000 !important;
       font-style: italic;
       text-align: left !important;
       padding-left: 18px;
       font-size: 18px;
       width: 24%;
-    }
-
-    th.total-header {
-      background-color: var(--gs-header-total-bg) !important;
     }
 
     tr:nth-child(even) td { 
@@ -220,60 +211,55 @@
       background-color: var(--gs-row-odd); 
     }
 
-    /* AGENT NAME CELL STYLING */
+    /* AGENT NAME CELL (BLACK TEXT) */
     .text-left { 
       text-align: left !important; 
-      font-weight: 800 !important; 
-      color: #0f172a !important;
+      font-weight: 700 !important; 
+      color: #000000 !important;
       padding-left: 18px !important;
       white-space: nowrap;
-      font-size: 20px !important;
+      font-size: 19px !important;
     }
 
-    /* METRIC CELL STYLING */
+    /* NUMERICAL CELLS (BLACK TEXT) */
     .metric-num {
-      font-weight: 700;
-      font-size: 20px;
+      font-weight: normal;
+      color: #000000 !important;
     }
 
     .total-disputed-cell {
-      font-weight: 900 !important;
-      font-size: 22px !important;
-      background-color: #f1f5f9 !important;
-      color: #0284c7 !important;
+      font-weight: 700 !important;
+      color: #000000 !important;
     }
 
+    /* ONLY EXCEPTION: WINRATE RESULT IS ACCENTED GREEN */
     .winrate-cell {
-      font-weight: 900 !important;
-      font-size: 21px !important;
+      font-weight: 800 !important;
       color: var(--gs-winrate-accent) !important;
     }
 
-    /* GRAND TOTAL SUMMARY ROW */
+    /* GRAND TOTAL SUMMARY ROW (BLACK TEXT WITH DOUBLE BORDER) */
     .summary-row td { 
-      font-weight: 900 !important; 
+      font-weight: 800 !important; 
       background-color: var(--gs-total-bg) !important; 
-      color: #ffffff !important;
-      border-top: 3px solid #000000 !important;
-      border-bottom: 3px solid #000000 !important;
-      padding: 13px 12px;
-      font-size: 22px !important;
+      color: #000000 !important;
+      border-top: 2px solid #000000 !important;
+      border-bottom: 2px solid #000000 !important;
+      padding: 10px 10px;
+      font-size: 20px !important;
     }
 
     .summary-row td.text-left {
-      color: #ffffff !important;
-      font-size: 22px !important;
-      letter-spacing: 1px;
-      text-transform: uppercase;
+      color: #000000 !important;
+      font-size: 20px !important;
     }
 
     .summary-row .total-disputed-cell {
-      background-color: #0f172a !important;
-      color: #38bdf8 !important;
+      color: #000000 !important;
     }
 
     .summary-row .winrate-cell {
-      color: #4ade80 !important;
+      color: var(--gs-winrate-accent) !important;
     }
 
     .empty-state {
@@ -310,7 +296,7 @@
     </div>
   </div>
 
-  <!-- TABLE CONTAINER -->
+  <!-- MAIN CARD CONTAINER -->
   <div class="card">
     <div class="card-top-bar">
       <div>
@@ -332,7 +318,6 @@
 const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 let lastChecksum = "";
 
-// TV-OPTIMIZED POLLING ENGINE: Unique timestamp prevents browser caching
 function pollCloudData() {
   const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_t=${Date.now()}`;
 
@@ -349,7 +334,6 @@ function pollCloudData() {
   }
 }
 
-// Built-in fallback for older Smart TV engines
 function tryXHR(url) {
   try {
     const xhr = new XMLHttpRequest();
@@ -383,7 +367,7 @@ function renderReport(payload) {
   if (!payload) return;
 
   const currentChecksum = JSON.stringify(payload);
-  if (currentChecksum === lastChecksum) return; // Prevent screen blinking
+  if (currentChecksum === lastChecksum) return; 
   lastChecksum = currentChecksum;
 
   const meta = document.getElementById('reportMeta');
@@ -418,7 +402,7 @@ function renderTable(data) {
           <th>Cool Off</th>
           <th>Escalated</th>
           <th>Expired</th>
-          <th class="total-header">Total Order Disputed</th>
+          <th>Total Order Disputed</th>
           <th>Winrate</th>
         </tr>
       </thead>
@@ -453,7 +437,7 @@ function renderTable(data) {
         <td class="metric-num">${r}</td>
         <td class="metric-num">${c}</td>
         <td class="metric-num">${e}</td>
-        <td class="metric-num" style="color: #64748b;">${x}</td>
+        <td class="metric-num">${x}</td>
         <td class="total-disputed-cell">${t}</td>
         <td class="winrate-cell">${w}%</td>
       </tr>
@@ -466,12 +450,12 @@ function renderTable(data) {
   html += `
       <tr class="summary-row">
         <td class="text-left">Grand Total</td>
-        <td>${totals.succ}</td>
-        <td>${totals.den}</td>
-        <td>${totals.ref}</td>
-        <td>${totals.cool}</td>
-        <td>${totals.esc}</td>
-        <td style="color: #94a3b8;">${totals.exp}</td>
+        <td class="metric-num">${totals.succ}</td>
+        <td class="metric-num">${totals.den}</td>
+        <td class="metric-num">${totals.ref}</td>
+        <td class="metric-num">${totals.cool}</td>
+        <td class="metric-num">${totals.esc}</td>
+        <td class="metric-num">${totals.exp}</td>
         <td class="total-disputed-cell">${totals.total}</td>
         <td class="winrate-cell">${overallWinRate}%</td>
       </tr>
@@ -482,13 +466,9 @@ function renderTable(data) {
   outputDiv.innerHTML = html;
 }
 
-// Initial check on page open
 pollCloudData();
-
-// Continual check every 4 seconds
 setInterval(pollCloudData, 4000);
 
-// Local tab listener for laptop testing
 window.addEventListener('storage', (e) => {
   if (e.key === 'atom_tracker_live_data' && e.newValue) {
     try { renderReport(JSON.parse(e.newValue)); } catch(err) {}
