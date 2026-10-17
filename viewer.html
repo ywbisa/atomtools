@@ -11,7 +11,7 @@
     :root {
       --bg-color: #0a0a0c;
       --card-bg: #121215;
-      --border-color: #27272a;
+      --border-color: #222222;
       --brand-beige: #e2d4bc;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
@@ -23,7 +23,6 @@
       --gs-row-odd: #ffffff;
       --gs-border: #d9d9d9;
       --gs-total-bg: #e0e0e0;
-      --gs-winrate-accent: #15803d; /* Only non-black text color */
     }
 
     * { box-sizing: border-box; }
@@ -185,11 +184,12 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* BOLD & BLACK TABLE HEADERS */
     th { 
       background-color: var(--gs-header-metrics-bg) !important; 
-      color: #ffffff !important; 
+      color: #000000 !important; 
       padding: 10px 8px; 
-      font-weight: normal !important;
+      font-weight: bold !important;
       font-size: 17px;
     }
 
@@ -197,6 +197,7 @@
       background-color: var(--gs-header-assignee-bg) !important;
       color: #000000 !important;
       font-style: italic;
+      font-weight: bold !important;
       text-align: left !important;
       padding-left: 18px;
       font-size: 18px;
@@ -232,10 +233,10 @@
       color: #000000 !important;
     }
 
-    /* ONLY EXCEPTION: WINRATE RESULT IS ACCENTED GREEN */
+    /* WINRATE RESULT (BLACK TEXT) */
     .winrate-cell {
       font-weight: 800 !important;
-      color: var(--gs-winrate-accent) !important;
+      color: #000000 !important;
     }
 
     /* GRAND TOTAL SUMMARY ROW (BLACK TEXT WITH DOUBLE BORDER) */
@@ -259,7 +260,7 @@
     }
 
     .summary-row .winrate-cell {
-      color: var(--gs-winrate-accent) !important;
+      color: #000000 !important;
     }
 
     .empty-state {
