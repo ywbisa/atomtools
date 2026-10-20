@@ -11,7 +11,7 @@
     :root {
       --bg-color: #0a0a0c;
       --card-bg: #121215;
-      --border-color: #222222;
+      --border-color: #27272a;
       --brand-beige: #e2d4bc;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
@@ -379,7 +379,24 @@ function renderReport(payload) {
   }
   meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  const rows = payload.rows || [];
+  // UNPACKING ENGINE: Handles both array format (compact) and object format
+  let rows = [];
+  if (Array.isArray(payload.rows)) {
+    rows = payload.rows;
+  } else if (Array.isArray(payload.r)) {
+    rows = payload.r.map(row => ({
+      name: row[0],
+      successful: row[1],
+      denied: row[2],
+      refunded: row[3],
+      coolOff: row[4],
+      escalated: row[5],
+      expired: row[6],
+      totalDispute: row[7],
+      winRate: row[8]
+    }));
+  }
+
   renderTable(rows);
 }
 
@@ -419,7 +436,9 @@ function renderTable(data) {
     const x = Number(row.expired) || 0;
     
     // EXPIRED IS EXCLUDED FROM TOTAL ORDER DISPUTED
-    const t = Number(row.totalDispute) || (s + d + r + c + e); 
+    const t = Number(row.totalDispute) !== undefined && !isNaN(Number(row.totalDispute)) 
+              ? Number(row.totalDispute) 
+              : (s + d + r + c + e);
     const w = typeof row.winRate === 'number' ? row.winRate.toFixed(2) : parseFloat(row.winRate || 0).toFixed(2);
 
     totals.succ += s;
