@@ -233,9 +233,9 @@
 
     th { 
       background-color: var(--gs-header-metrics-bg) !important; 
-      color: var(--gs-header-text) !important; 
+      color: #000000 !important; 
       padding: 6px 8px; 
-      font-weight: normal !important;
+      font-weight: bold !important;
       font-size: 13px;
     }
 
@@ -243,8 +243,8 @@
       background-color: var(--gs-header-assignee-bg) !important;
       color: #000000 !important;
       font-style: italic;
+      font-weight: bold !important;
       text-align: left !important;
-      font-weight: normal !important;
     }
 
     tr:nth-child(even) td { background-color: var(--gs-row-even); }
@@ -253,7 +253,7 @@
 
     .text-left { 
       text-align: left !important; 
-      font-weight: normal !important; 
+      font-weight: 700 !important; 
       color: #000000 !important;
     }
 
@@ -435,29 +435,40 @@ function processCSV() {
       const summaryArray = generateSummary(parsedData, targetDay);
       
       if (summaryArray) {
-        const payload = {
-          day: targetDay,
-          updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          rows: summaryArray
-        };
-
         renderTable(summaryArray);
 
-        // Keep local tabs updated
-        localStorage.setItem('atom_tracker_live_data', JSON.stringify(payload));
-        try { new BroadcastChannel('atom_tracker_live_channel').postMessage(payload); } catch(e) {}
+        // COMPACT ARRAY PAYLOAD: Drastically reduces data size below ntfy's 4KB limit
+        const compactPayload = {
+          day: targetDay,
+          updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          r: summaryArray.map(item => [
+            item.name,
+            item.successful,
+            item.denied,
+            item.refunded,
+            item.coolOff,
+            item.escalated,
+            item.expired,
+            item.totalDispute,
+            item.winRate
+          ])
+        };
+
+        // Local browser storage sync
+        localStorage.setItem('atom_tracker_live_data', JSON.stringify(compactPayload));
+        try { new BroadcastChannel('atom_tracker_live_channel').postMessage(compactPayload); } catch(e) {}
 
         // Broadcast directly across the cloud to the Smart TV
-        statusDiv.textContent = "Broadcasting data directly to Smart TV...";
+        statusDiv.textContent = `Broadcasting data for ${summaryArray.length} agents directly to Smart TV...`;
         try {
           const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}`, {
             method: 'POST',
-            body: JSON.stringify(payload)
+            body: JSON.stringify(compactPayload)
           });
 
           if (res.ok) {
             statusDiv.style.color = "#22c55e";
-            statusDiv.textContent = `✅ Processed Day ${targetDay} and broadcast live! Your Smart TV will display it within 4 seconds.`;
+            statusDiv.textContent = `✅ Processed Day ${targetDay} (${summaryArray.length} agents) and broadcast live! Smart TV will update within 4 seconds.`;
           } else {
             throw new Error("Relay response status: " + res.status);
           }
@@ -521,7 +532,6 @@ function generateSummary(rows, targetDay) {
     }
     if (rowDay !== targetDay) continue;
 
-    // Direct row tally to match team leader Google Sheet
     if (!stats[assignee]) {
       stats[assignee] = { successful: 0, denied: 0, refunded: 0, coolOff: 0, escalated: 0, expired: 0 };
     }
@@ -537,7 +547,7 @@ function generateSummary(rows, targetDay) {
 
   return Object.keys(stats).map(name => {
     const s = stats[name];
-    // FIX: EXPIRED is EXCLUDED from Total Order Disputed
+    // EXPIRED is EXCLUDED from Total Order Disputed
     const totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated; 
     const winRateDenom = s.successful + s.denied + s.coolOff;
     const winRate = winRateDenom > 0 ? (s.successful / winRateDenom * 100).toFixed(2) : "0.00";
