@@ -10,19 +10,19 @@
   <style>
     :root {
       --bg-color: #0a0a0c;
-      --card-bg: #121215;
+      --card-bg: #141418;
       --border-color: #27272a;
       --brand-beige: #e2d4bc;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       
-      /* Google Sheets Palette */
-      --gs-header-assignee-bg: #dbe5f1;
-      --gs-header-metrics-bg: #7b92b3;
-      --gs-row-even: #f3f3f3;
-      --gs-row-odd: #ffffff;
-      --gs-border: #d9d9d9;
-      --gs-total-bg: #e0e0e0;
+      /* TV Optimized Palette */
+      --table-header-bg: #1e2530;
+      --table-header-text: #66fcf1;
+      --row-even: #18191f;
+      --row-odd: #121316;
+      --cell-border: #23252d;
+      --total-bg: #0f1013;
     }
 
     * { box-sizing: border-box; }
@@ -32,18 +32,19 @@
       background-color: var(--bg-color); 
       color: var(--text-main);
       margin: 0;
-      padding: 12px 18px;
+      padding: 14px 20px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: space-between;
       -webkit-font-smoothing: antialiased;
+      overflow: hidden;
     }
 
     /* TOP TV STATUS BAR */
     .brand-header {
-      width: 98vw;
+      width: 100%;
       max-width: 1920px;
       margin-bottom: 10px;
       display: flex;
@@ -61,20 +62,37 @@
 
     .brand-title {
       font-weight: 900;
-      font-size: 24px;
+      font-size: 26px;
       letter-spacing: 2px;
       color: var(--brand-beige);
       text-transform: uppercase;
     }
 
     .brand-subtitle {
-      font-size: 13px;
+      font-size: 14px;
       color: var(--text-muted);
       letter-spacing: 1px;
       text-transform: uppercase;
       font-weight: 600;
       border-left: 2px solid #334155;
       padding-left: 12px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .page-indicator-badge {
+      font-size: 13px;
+      color: var(--brand-beige);
+      background: #18181b;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      font-weight: 700;
+      letter-spacing: 0.5px;
     }
 
     .status-badge {
@@ -105,29 +123,32 @@
       50% { opacity: 0.4; transform: scale(0.85); }
     }
 
-    /* MAIN TV CARD CONTAINER (FULL WIDTH) */
+    /* MAIN TV CARD CONTAINER */
     .card { 
       background: var(--card-bg); 
-      padding: 14px 18px; 
-      border-radius: 8px; 
+      padding: 16px 20px; 
+      border-radius: 10px; 
       border: 1px solid var(--border-color);
-      width: 98vw;
+      width: 100%;
       max-width: 1920px; 
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
     }
 
     .card-top-bar {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
+      align-items: center;
       margin-bottom: 12px;
-      padding-bottom: 8px;
+      padding-bottom: 10px;
       border-bottom: 1px solid #1e293b;
     }
 
     .card-title {
       margin: 0;
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
       letter-spacing: 0.5px;
       color: #ffffff;
@@ -140,17 +161,17 @@
       content: '';
       display: inline-block;
       width: 8px;
-      height: 22px;
+      height: 24px;
       background-color: var(--brand-beige);
       border-radius: 2px;
     }
 
     .report-meta {
-      font-size: 14px;
+      font-size: 15px;
       color: var(--text-muted);
       font-weight: 600;
       background: #18181b;
-      padding: 5px 12px;
+      padding: 6px 14px;
       border-radius: 6px;
       border: 1px solid #27272a;
     }
@@ -158,124 +179,156 @@
     /* FULL WIDTH TABLE CONTAINER */
     .table-container {
       width: 100%;
-      overflow-x: hidden;
-      background-color: #ffffff;
-      border-radius: 4px;
-      border: 1px solid var(--gs-border);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--card-bg);
+      border-radius: 6px;
+      border: 1px solid var(--cell-border);
+      overflow: hidden;
     }
 
     table { 
       width: 100%; 
-      border-collapse: separate; 
+      table-layout: fixed;
+      border-collapse: collapse;
       border-spacing: 0;
-      background-color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
     }
 
-    /* ALL TABLE CELLS DEFAULT TO PURE BLACK TEXT */
+    /* COLUMN WIDTHS (Locks layout so switching pages never shifts columns) */
+    .col-assignee { width: 23%; }
+    .col-succ     { width: 9%; }
+    .col-den      { width: 9%; }
+    .col-ref      { width: 10%; }
+    .col-cool     { width: 8%; }
+    .col-esc      { width: 8%; }
+    .col-exp      { width: 8%; }
+    .col-total    { width: 13%; }
+    .col-win      { width: 12%; }
+
     th, td { 
-      border-right: 1px solid var(--gs-border);
-      border-bottom: 1px solid var(--gs-border);
-      padding: 8px 10px; 
-      text-align: center !important; 
-      font-size: 19px;
+      border-right: 1px solid var(--cell-border);
+      border-bottom: 1px solid var(--cell-border);
+      padding: 13px 10px; 
+      text-align: center; 
+      font-size: 21px;
       line-height: 1.25;
-      color: #000000 !important;
       font-variant-numeric: tabular-nums;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    /* BOLD & BLACK TABLE HEADERS */
+    th:last-child, td:last-child {
+      border-right: none;
+    }
+
     th { 
-      background-color: var(--gs-header-metrics-bg) !important; 
-      color: #000000 !important; 
-      padding: 10px 8px; 
-      font-weight: bold !important;
+      background-color: var(--table-header-bg); 
+      color: var(--table-header-text); 
+      padding: 13px 8px; 
+      font-weight: 800;
       font-size: 17px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
     }
 
     th.assignee-header {
-      background-color: var(--gs-header-assignee-bg) !important;
-      color: #000000 !important;
-      font-style: italic;
-      font-weight: bold !important;
-      text-align: left !important;
-      padding-left: 18px;
-      font-size: 18px;
-      width: 24%;
+      text-align: left;
+      padding-left: 20px;
     }
 
-    tr:nth-child(even) td { 
-      background-color: var(--gs-row-even); 
+    tbody tr:nth-child(even) td { 
+      background-color: var(--row-even); 
     }
     
-    tr:nth-child(odd) td { 
-      background-color: var(--gs-row-odd); 
+    tbody tr:nth-child(odd) td { 
+      background-color: var(--row-odd); 
     }
 
-    /* AGENT NAME CELL (BLACK TEXT) */
     .text-left { 
-      text-align: left !important; 
-      font-weight: 700 !important; 
-      color: #000000 !important;
-      padding-left: 18px !important;
-      white-space: nowrap;
-      font-size: 19px !important;
+      text-align: left; 
+      font-weight: 700; 
+      color: #ffffff;
+      padding-left: 20px;
     }
 
-    /* NUMERICAL CELLS (BLACK TEXT) */
     .metric-num {
-      font-weight: normal;
-      color: #000000 !important;
+      font-weight: 600;
+      color: #e2e8f0;
     }
 
     .total-disputed-cell {
-      font-weight: 700 !important;
-      color: #000000 !important;
+      font-weight: 800;
+      color: #ffffff;
     }
 
-    /* WINRATE RESULT (BLACK TEXT) */
-    .winrate-cell {
-      font-weight: 800 !important;
-      color: #000000 !important;
+    /* DYNAMIC WINRATE BADGES */
+    .win-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-weight: 800;
+      font-size: 20px;
     }
 
-    /* GRAND TOTAL SUMMARY ROW (BLACK TEXT WITH DOUBLE BORDER) */
-    .summary-row td { 
-      font-weight: 800 !important; 
-      background-color: var(--gs-total-bg) !important; 
-      color: #000000 !important;
-      border-top: 2px solid #000000 !important;
-      border-bottom: 2px solid #000000 !important;
-      padding: 10px 10px;
-      font-size: 20px !important;
+    .win-high {
+      color: #4ade80; /* Green */
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.35);
     }
 
-    .summary-row td.text-left {
-      color: #000000 !important;
-      font-size: 20px !important;
+    .win-mid {
+      color: #facc15; /* Yellow */
+      background: rgba(250, 204, 21, 0.15);
+      border: 1px solid rgba(250, 204, 21, 0.35);
     }
 
-    .summary-row .total-disputed-cell {
-      color: #000000 !important;
+    .win-low {
+      color: #f87171; /* Red */
+      background: rgba(248, 113, 113, 0.15);
+      border: 1px solid rgba(248, 113, 113, 0.35);
     }
 
-    .summary-row .winrate-cell {
-      color: #000000 !important;
+    /* FIXED FOOTER (GRAND TOTAL ALWAYS VISIBLE) */
+    tfoot tr td { 
+      font-weight: 800; 
+      background-color: var(--total-bg) !important; 
+      color: #66fcf1;
+      border-top: 2px solid var(--border-color);
+      border-bottom: none;
+      padding: 14px 10px;
+      font-size: 22px;
+    }
+
+    tfoot tr td.text-left {
+      color: var(--brand-beige);
+      font-size: 22px;
+    }
+
+    /* SMOOTH ROTATION TRANSITION */
+    .fade-switch {
+      animation: fadeInRow 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes fadeInRow {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     .empty-state {
-      padding: 50px 20px;
+      padding: 80px 20px;
       text-align: center;
       color: var(--text-muted);
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 600;
       background: #18181b;
       border-radius: 4px;
     }
 
     .brand-footer {
-      margin-top: 14px;
-      font-size: 12px;
+      margin-top: 10px;
+      font-size: 13px;
       color: var(--text-muted);
       letter-spacing: 1.5px;
       text-transform: uppercase;
@@ -291,9 +344,12 @@
       <div class="brand-title">ATOMS Daily Tracker</div>
       <div class="brand-subtitle">Operations Live Board</div>
     </div>
-    <div class="status-badge">
-      <span class="status-dot"></span>
-      <span id="badgeText">Live Feed Active</span>
+    <div class="header-right">
+      <div class="page-indicator-badge" id="pageIndicator">Loading...</div>
+      <div class="status-badge">
+        <span class="status-dot"></span>
+        <span id="badgeText">Live Feed Active</span>
+      </div>
     </div>
   </div>
 
@@ -318,6 +374,14 @@
 <script>
 const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 let lastChecksum = "";
+
+// TV ROTATION STATE
+const ROWS_PER_PAGE = 10;      // 10 Agents per page keeps text large and legible
+const ROTATION_INTERVAL = 8000; // Flips page every 8 seconds
+let currentPage = 0;
+let cachedRows = [];
+let cachedTotals = null;
+let rotationTimer = null;
 
 function pollCloudData() {
   const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_t=${Date.now()}`;
@@ -379,7 +443,7 @@ function renderReport(payload) {
   }
   meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  // UNPACKING ENGINE: Handles both array format (compact) and object format
+  // UNPACKING ENGINE: Identical to your original viewer
   let rows = [];
   if (Array.isArray(payload.rows)) {
     rows = payload.rows;
@@ -397,20 +461,73 @@ function renderReport(payload) {
     }));
   }
 
-  renderTable(rows);
+  // Pre-calculate full dataset totals (Overall Grand Total)
+  let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
+  rows.forEach(row => {
+    const s = Number(row.successful) || 0;
+    const d = Number(row.denied) || 0;
+    const r = Number(row.refunded) || 0;
+    const c = Number(row.coolOff) || 0;
+    const e = Number(row.escalated) || 0;
+    const x = Number(row.expired) || 0;
+    const t = (row.totalDispute !== undefined && !isNaN(Number(row.totalDispute))) 
+              ? Number(row.totalDispute) 
+              : (s + d + r + c + e);
+
+    totals.succ += s;
+    totals.den += d;
+    totals.ref += r;
+    totals.cool += c;
+    totals.esc += e;
+    totals.exp += x;
+    totals.total += t;
+  });
+
+  const overallWinRateDenom = totals.succ + totals.den + totals.cool;
+  totals.overallWinRate = overallWinRateDenom > 0 ? (totals.succ / overallWinRateDenom * 100).toFixed(2) : "0.00";
+
+  cachedRows = rows;
+  cachedTotals = totals;
+  currentPage = 0; // Reset to page 1 on new incoming data
+
+  buildTableShell();
+  renderCurrentPage();
+
+  // Reset rotation timer
+  if (rotationTimer) clearInterval(rotationTimer);
+  if (cachedRows.length > ROWS_PER_PAGE) {
+    rotationTimer = setInterval(nextPage, ROTATION_INTERVAL);
+  }
 }
 
-function renderTable(data) {
+function getWinrateBadge(rateNum) {
+  let badgeClass = 'win-mid';
+  if (rateNum >= 60) badgeClass = 'win-high';
+  else if (rateNum < 50) badgeClass = 'win-low';
+  return `<span class="win-badge ${badgeClass}">${rateNum.toFixed(2)}%</span>`;
+}
+
+function buildTableShell() {
   const outputDiv = document.getElementById('output');
-  if (!data || data.length === 0) {
+  if (!cachedRows || cachedRows.length === 0) {
     outputDiv.innerHTML = `<div class="empty-state">No matching rows found in this report.</div>`;
+    document.getElementById('pageIndicator').textContent = '0 Agents';
     return;
   }
 
-  let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
-  
-  let html = `
+  outputDiv.innerHTML = `
     <table id="summaryTable">
+      <colgroup>
+        <col class="col-assignee">
+        <col class="col-succ">
+        <col class="col-den">
+        <col class="col-ref">
+        <col class="col-cool">
+        <col class="col-esc">
+        <col class="col-exp">
+        <col class="col-total">
+        <col class="col-win">
+      </colgroup>
       <thead>
         <tr>
           <th class="assignee-header">Assignee</th>
@@ -420,37 +537,57 @@ function renderTable(data) {
           <th>Cool Off</th>
           <th>Escalated</th>
           <th>Expired</th>
-          <th>Total Order Disputed</th>
+          <th>Total Disputed</th>
           <th>Winrate</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="pagedTbody">
+        <!-- Rows dynamically injected here -->
+      </tbody>
+      <tfoot>
+        <tr class="summary-row">
+          <td class="text-left">Grand Total</td>
+          <td class="metric-num">${cachedTotals.succ}</td>
+          <td class="metric-num">${cachedTotals.den}</td>
+          <td class="metric-num">${cachedTotals.ref}</td>
+          <td class="metric-num">${cachedTotals.cool}</td>
+          <td class="metric-num">${cachedTotals.esc}</td>
+          <td class="metric-num">${cachedTotals.exp}</td>
+          <td class="total-disputed-cell">${cachedTotals.total}</td>
+          <td>${getWinrateBadge(parseFloat(cachedTotals.overallWinRate))}</td>
+        </tr>
+      </tfoot>
+    </table>
   `;
+}
 
-  data.forEach(row => {
+function renderCurrentPage() {
+  const tbody = document.getElementById('pagedTbody');
+  const indicator = document.getElementById('pageIndicator');
+  if (!tbody || !cachedRows || cachedRows.length === 0) return;
+
+  const totalPages = Math.ceil(cachedRows.length / ROWS_PER_PAGE);
+  indicator.textContent = `Page ${currentPage + 1} of ${totalPages} • ${cachedRows.length} Agents`;
+
+  const start = currentPage * ROWS_PER_PAGE;
+  const end = start + ROWS_PER_PAGE;
+  const pageSlice = cachedRows.slice(start, end);
+
+  let rowsHtml = '';
+  pageSlice.forEach(row => {
     const s = Number(row.successful) || 0;
     const d = Number(row.denied) || 0;
     const r = Number(row.refunded) || 0;
     const c = Number(row.coolOff) || 0;
     const e = Number(row.escalated) || 0;
     const x = Number(row.expired) || 0;
-    
-    // EXPIRED IS EXCLUDED FROM TOTAL ORDER DISPUTED
-    const t = Number(row.totalDispute) !== undefined && !isNaN(Number(row.totalDispute)) 
+    const t = (row.totalDispute !== undefined && !isNaN(Number(row.totalDispute))) 
               ? Number(row.totalDispute) 
               : (s + d + r + c + e);
-    const w = typeof row.winRate === 'number' ? row.winRate.toFixed(2) : parseFloat(row.winRate || 0).toFixed(2);
+    const w = typeof row.winRate === 'number' ? row.winRate : parseFloat(row.winRate || 0);
 
-    totals.succ += s;
-    totals.den += d;
-    totals.ref += r;
-    totals.cool += c;
-    totals.esc += e;
-    totals.exp += x;
-    totals.total += t;
-
-    html += `
-      <tr>
+    rowsHtml += `
+      <tr class="fade-switch">
         <td class="text-left">${row.name}</td>
         <td class="metric-num">${s}</td>
         <td class="metric-num">${d}</td>
@@ -459,31 +596,19 @@ function renderTable(data) {
         <td class="metric-num">${e}</td>
         <td class="metric-num">${x}</td>
         <td class="total-disputed-cell">${t}</td>
-        <td class="winrate-cell">${w}%</td>
+        <td>${getWinrateBadge(w)}</td>
       </tr>
     `;
   });
 
-  const overallWinRateDenom = totals.succ + totals.den + totals.cool;
-  const overallWinRate = overallWinRateDenom > 0 ? (totals.succ / overallWinRateDenom * 100).toFixed(2) : "0.00";
+  tbody.innerHTML = rowsHtml;
+}
 
-  html += `
-      <tr class="summary-row">
-        <td class="text-left">Grand Total</td>
-        <td class="metric-num">${totals.succ}</td>
-        <td class="metric-num">${totals.den}</td>
-        <td class="metric-num">${totals.ref}</td>
-        <td class="metric-num">${totals.cool}</td>
-        <td class="metric-num">${totals.esc}</td>
-        <td class="metric-num">${totals.exp}</td>
-        <td class="total-disputed-cell">${totals.total}</td>
-        <td class="winrate-cell">${overallWinRate}%</td>
-      </tr>
-    </tbody>
-  </table>
-  `;
-
-  outputDiv.innerHTML = html;
+function nextPage() {
+  if (!cachedRows || cachedRows.length <= ROWS_PER_PAGE) return;
+  const totalPages = Math.ceil(cachedRows.length / ROWS_PER_PAGE);
+  currentPage = (currentPage + 1) % totalPages;
+  renderCurrentPage();
 }
 
 pollCloudData();
@@ -494,6 +619,7 @@ window.addEventListener('storage', (e) => {
     try { renderReport(JSON.parse(e.newValue)); } catch(err) {}
   }
 });
+
 try {
   new BroadcastChannel('atom_tracker_live_channel').onmessage = (e) => {
     if (e.data) renderReport(e.data);
