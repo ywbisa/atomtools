@@ -16,13 +16,13 @@
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       
-      /* TV Optimized Palette */
-      --table-header-bg: #1e2530;
-      --table-header-text: #66fcf1;
-      --row-even: #18191f;
-      --row-odd: #121316;
-      --cell-border: #23252d;
-      --total-bg: #0f1013;
+      /* Google Sheets Palette (Restored) */
+      --gs-header-bg: #4a6585;      /* Steel blue header for crisp white text */
+      --gs-header-text: #ffffff;    /* Pure white header text */
+      --gs-row-odd: #ffffff;        /* White row */
+      --gs-row-even: #f3f3f3;       /* Light gray row */
+      --gs-border: #d9d9d9;
+      --gs-total-bg: #e0e0e0;
     }
 
     * { box-sizing: border-box; }
@@ -182,9 +182,9 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      background-color: var(--card-bg);
+      background-color: #ffffff;
       border-radius: 6px;
-      border: 1px solid var(--cell-border);
+      border: 1px solid var(--gs-border);
       overflow: hidden;
     }
 
@@ -193,9 +193,10 @@
       table-layout: fixed;
       border-collapse: collapse;
       border-spacing: 0;
+      background-color: #ffffff;
     }
 
-    /* COLUMN WIDTHS (Locks layout so switching pages never shifts columns) */
+    /* COLUMN WIDTH LOCKS (Prevents shifting on TV across pages) */
     .col-assignee { width: 23%; }
     .col-succ     { width: 9%; }
     .col-den      { width: 9%; }
@@ -206,9 +207,10 @@
     .col-total    { width: 13%; }
     .col-win      { width: 12%; }
 
+    /* TABLE CELLS: Pure black text for high readability on white/gray rows */
     th, td { 
-      border-right: 1px solid var(--cell-border);
-      border-bottom: 1px solid var(--cell-border);
+      border-right: 1px solid var(--gs-border);
+      border-bottom: 1px solid var(--gs-border);
       padding: 13px 10px; 
       text-align: center; 
       font-size: 21px;
@@ -217,16 +219,18 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      color: #000000;
     }
 
     th:last-child, td:last-child {
       border-right: none;
     }
 
+    /* WHITE TEXT HEADERS ON STEEL BLUE */
     th { 
-      background-color: var(--table-header-bg); 
-      color: var(--table-header-text); 
-      padding: 13px 8px; 
+      background-color: var(--gs-header-bg); 
+      color: var(--gs-header-text); 
+      padding: 14px 8px; 
       font-weight: 800;
       font-size: 17px;
       letter-spacing: 0.8px;
@@ -238,81 +242,61 @@
       padding-left: 20px;
     }
 
+    /* ALTERNATING WHITE & GRAY ROWS */
     tbody tr:nth-child(even) td { 
-      background-color: var(--row-even); 
+      background-color: var(--gs-row-even); 
     }
     
     tbody tr:nth-child(odd) td { 
-      background-color: var(--row-odd); 
+      background-color: var(--gs-row-odd); 
     }
 
     .text-left { 
       text-align: left; 
       font-weight: 700; 
-      color: #ffffff;
+      color: #000000;
       padding-left: 20px;
     }
 
     .metric-num {
-      font-weight: 600;
-      color: #e2e8f0;
+      font-weight: 500;
+      color: #000000;
     }
 
     .total-disputed-cell {
       font-weight: 800;
-      color: #ffffff;
+      color: #000000;
     }
 
-    /* DYNAMIC WINRATE BADGES */
-    .win-badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 4px;
+    /* WINRATE: Plain black text without colored badge boxes */
+    .winrate-cell {
       font-weight: 800;
-      font-size: 20px;
+      color: #000000;
     }
 
-    .win-high {
-      color: #4ade80; /* Green */
-      background: rgba(34, 197, 94, 0.15);
-      border: 1px solid rgba(34, 197, 94, 0.35);
-    }
-
-    .win-mid {
-      color: #facc15; /* Yellow */
-      background: rgba(250, 204, 21, 0.15);
-      border: 1px solid rgba(250, 204, 21, 0.35);
-    }
-
-    .win-low {
-      color: #f87171; /* Red */
-      background: rgba(248, 113, 113, 0.15);
-      border: 1px solid rgba(248, 113, 113, 0.35);
-    }
-
-    /* FIXED FOOTER (GRAND TOTAL ALWAYS VISIBLE) */
+    /* PINNED GRAND TOTAL FOOTER */
     tfoot tr td { 
-      font-weight: 800; 
-      background-color: var(--total-bg) !important; 
-      color: #66fcf1;
-      border-top: 2px solid var(--border-color);
+      font-weight: 900; 
+      background-color: var(--gs-total-bg) !important; 
+      color: #000000;
+      border-top: 2px solid #000000;
       border-bottom: none;
       padding: 14px 10px;
       font-size: 22px;
     }
 
     tfoot tr td.text-left {
-      color: var(--brand-beige);
+      color: #000000;
       font-size: 22px;
     }
 
-    /* SMOOTH ROTATION TRANSITION */
+    /* SMOOTH TV ROTATION TRANSITION */
     .fade-switch {
-      animation: fadeInRow 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: fadeInRow 0.35s ease-in-out;
     }
 
     @keyframes fadeInRow {
-      from { opacity: 0; transform: translateY(6px); }
+      from { opacity: 0; transform: translateY(4px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
@@ -375,9 +359,9 @@
 const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 let lastChecksum = "";
 
-// TV ROTATION STATE
-const ROWS_PER_PAGE = 13;      // 10 Agents per page keeps text large and legible
-const ROTATION_INTERVAL = 4000; // Flips page every 8 seconds
+// TV ROTATION SETTINGS
+const ROWS_PER_PAGE = 10;      // 10 Agents per page keeps text large and readable on TV
+const ROTATION_INTERVAL = 8000; // Cycles every 8 seconds
 let currentPage = 0;
 let cachedRows = [];
 let cachedTotals = null;
@@ -443,7 +427,7 @@ function renderReport(payload) {
   }
   meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  // UNPACKING ENGINE: Identical to your original viewer
+  // UNPACKING ENGINE: Handles both array and object formats
   let rows = [];
   if (Array.isArray(payload.rows)) {
     rows = payload.rows;
@@ -461,7 +445,7 @@ function renderReport(payload) {
     }));
   }
 
-  // Pre-calculate full dataset totals (Overall Grand Total)
+  // Pre-calculate team Grand Totals
   let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
   rows.forEach(row => {
     const s = Number(row.successful) || 0;
@@ -488,23 +472,15 @@ function renderReport(payload) {
 
   cachedRows = rows;
   cachedTotals = totals;
-  currentPage = 0; // Reset to page 1 on new incoming data
+  currentPage = 0;
 
   buildTableShell();
   renderCurrentPage();
 
-  // Reset rotation timer
   if (rotationTimer) clearInterval(rotationTimer);
   if (cachedRows.length > ROWS_PER_PAGE) {
     rotationTimer = setInterval(nextPage, ROTATION_INTERVAL);
   }
-}
-
-function getWinrateBadge(rateNum) {
-  let badgeClass = 'win-mid';
-  if (rateNum >= 60) badgeClass = 'win-high';
-  else if (rateNum < 50) badgeClass = 'win-low';
-  return `<span class="win-badge ${badgeClass}">${rateNum.toFixed(2)}%</span>`;
 }
 
 function buildTableShell() {
@@ -554,7 +530,7 @@ function buildTableShell() {
           <td class="metric-num">${cachedTotals.esc}</td>
           <td class="metric-num">${cachedTotals.exp}</td>
           <td class="total-disputed-cell">${cachedTotals.total}</td>
-          <td>${getWinrateBadge(parseFloat(cachedTotals.overallWinRate))}</td>
+          <td class="winrate-cell">${cachedTotals.overallWinRate}%</td>
         </tr>
       </tfoot>
     </table>
@@ -584,7 +560,7 @@ function renderCurrentPage() {
     const t = (row.totalDispute !== undefined && !isNaN(Number(row.totalDispute))) 
               ? Number(row.totalDispute) 
               : (s + d + r + c + e);
-    const w = typeof row.winRate === 'number' ? row.winRate : parseFloat(row.winRate || 0);
+    const w = typeof row.winRate === 'number' ? row.winRate.toFixed(2) : parseFloat(row.winRate || 0).toFixed(2);
 
     rowsHtml += `
       <tr class="fade-switch">
@@ -596,7 +572,7 @@ function renderCurrentPage() {
         <td class="metric-num">${e}</td>
         <td class="metric-num">${x}</td>
         <td class="total-disputed-cell">${t}</td>
-        <td>${getWinrateBadge(w)}</td>
+        <td class="winrate-cell">${w}%</td>
       </tr>
     `;
   });
