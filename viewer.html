@@ -182,9 +182,9 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      background-color: #ffffff;
+      background-color: transparent; /* CHANGED: Was #ffffff, now blends with card background */
       border-radius: 6px;
-      border: 1px solid var(--gs-border);
+      border: 1px solid var(--border-color); /* Matches outer theme */
       overflow: hidden;
     }
 
@@ -193,7 +193,7 @@
       table-layout: fixed;
       border-collapse: collapse;
       border-spacing: 0;
-      background-color: #ffffff;
+      background-color: transparent; /* CHANGED: Prevents white block behind empty rows */
     }
 
     /* COLUMN WIDTH LOCKS (Prevents shifting on TV across pages) */
@@ -207,7 +207,7 @@
     .col-total    { width: 13%; }
     .col-win      { width: 12%; }
 
-    /* TABLE CELLS: Pure black text for high readability on white/gray rows */
+    /* TABLE CELLS */
     th, td { 
       border-right: 1px solid var(--gs-border);
       border-bottom: 1px solid var(--gs-border);
@@ -235,6 +235,8 @@
       font-size: 17px;
       letter-spacing: 0.8px;
       text-transform: uppercase;
+      border-right: 1px solid #5a7798; /* Softer border for header */
+      border-bottom: none;
     }
 
     th.assignee-header {
@@ -242,7 +244,7 @@
       padding-left: 20px;
     }
 
-    /* ALTERNATING WHITE & GRAY ROWS */
+    /* ALTERNATING WHITE & GRAY ROWS (Only applies to actual data rows) */
     tbody tr:nth-child(even) td { 
       background-color: var(--gs-row-even); 
     }
@@ -268,7 +270,7 @@
       color: #000000;
     }
 
-    /* WINRATE: Plain black text without colored badge boxes */
+    /* WINRATE */
     .winrate-cell {
       font-weight: 800;
       color: #000000;
@@ -288,6 +290,11 @@
     tfoot tr td.text-left {
       color: #000000;
       font-size: 22px;
+    }
+
+    /* Pushes tfoot to bottom if rows are few */
+    tfoot {
+      margin-top: auto;
     }
 
     /* SMOOTH TV ROTATION TRANSITION */
@@ -346,7 +353,8 @@
       <div class="report-meta" id="reportMeta">Connecting live stream...</div>
     </div>
 
-    <div class="table-container" id="output">
+    <!-- Ensure table takes up space so footer stays at bottom -->
+    <div class="table-container" id="output" style="display: flex; flex-direction: column;">
       <div class="empty-state">Waiting for report upload from Admin...</div>
     </div>
   </div>
@@ -360,8 +368,8 @@ const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 let lastChecksum = "";
 
 // TV ROTATION SETTINGS
-const ROWS_PER_PAGE = 13;      // 10 Agents per page keeps text large and readable on TV
-const ROTATION_INTERVAL = 4000; // Cycles every 8 seconds
+const ROWS_PER_PAGE = 14;      // 13 Agents per page
+const ROTATION_INTERVAL = 4000; // Cycles every 4 seconds
 let currentPage = 0;
 let cachedRows = [];
 let cachedTotals = null;
@@ -427,7 +435,7 @@ function renderReport(payload) {
   }
   meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  // UNPACKING ENGINE: Handles both array and object formats
+  // UNPACKING ENGINE
   let rows = [];
   if (Array.isArray(payload.rows)) {
     rows = payload.rows;
@@ -492,8 +500,8 @@ function buildTableShell() {
   }
 
   outputDiv.innerHTML = `
-    <table id="summaryTable">
-      <colgroup>
+    <table id="summaryTable" style="display: flex; flex-direction: column; height: 100%;">
+      <colgroup style="display: table-column-group;">
         <col class="col-assignee">
         <col class="col-succ">
         <col class="col-den">
@@ -504,7 +512,7 @@ function buildTableShell() {
         <col class="col-total">
         <col class="col-win">
       </colgroup>
-      <thead>
+      <thead style="display: table-header-group;">
         <tr>
           <th class="assignee-header">Assignee</th>
           <th>Successful</th>
@@ -517,10 +525,10 @@ function buildTableShell() {
           <th>Winrate</th>
         </tr>
       </thead>
-      <tbody id="pagedTbody">
+      <tbody id="pagedTbody" style="display: table-row-group;">
         <!-- Rows dynamically injected here -->
       </tbody>
-      <tfoot>
+      <tfoot style="display: table-footer-group; margin-top: auto;">
         <tr class="summary-row">
           <td class="text-left">Grand Total</td>
           <td class="metric-num">${cachedTotals.succ}</td>
