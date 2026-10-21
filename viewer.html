@@ -16,7 +16,7 @@
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       
-      /* Google Sheets Palette (Restored) */
+      /* Google Sheets Palette */
       --gs-header-bg: #4a6585;      /* Steel blue header for crisp white text */
       --gs-header-text: #ffffff;    /* Pure white header text */
       --gs-row-odd: #ffffff;        /* White row */
@@ -176,27 +176,25 @@
       border: 1px solid #27272a;
     }
 
-    /* FULL WIDTH TABLE CONTAINER */
+    /* FULL WIDTH TABLE CONTAINER (Wraps tightly to table rows, no white background spill) */
     .table-container {
       width: 100%;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background-color: #ffffff;
+      background-color: transparent;
       border-radius: 6px;
-      border: 1px solid var(--gs-border);
+      border: 1px solid var(--border-color);
       overflow: hidden;
     }
 
+    /* STANDARD FULL-WIDTH TABLE */
     table { 
       width: 100%; 
       table-layout: fixed;
       border-collapse: collapse;
       border-spacing: 0;
-      background-color: #ffffff;
+      background-color: transparent;
     }
 
-    /* COLUMN WIDTH LOCKS (Prevents shifting on TV across pages) */
+    /* COLUMN WIDTH LOCKS (100% total width) */
     .col-assignee { width: 23%; }
     .col-succ     { width: 9%; }
     .col-den      { width: 9%; }
@@ -207,7 +205,7 @@
     .col-total    { width: 13%; }
     .col-win      { width: 12%; }
 
-    /* TABLE CELLS: Pure black text for high readability on white/gray rows */
+    /* TABLE CELLS */
     th, td { 
       border-right: 1px solid var(--gs-border);
       border-bottom: 1px solid var(--gs-border);
@@ -235,6 +233,8 @@
       font-size: 17px;
       letter-spacing: 0.8px;
       text-transform: uppercase;
+      border-right: 1px solid #5d799b;
+      border-bottom: none;
     }
 
     th.assignee-header {
@@ -268,7 +268,6 @@
       color: #000000;
     }
 
-    /* WINRATE: Plain black text without colored badge boxes */
     .winrate-cell {
       font-weight: 800;
       color: #000000;
@@ -360,8 +359,8 @@ const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 let lastChecksum = "";
 
 // TV ROTATION SETTINGS
-const ROWS_PER_PAGE = 10;      // 10 Agents per page keeps text large and readable on TV
-const ROTATION_INTERVAL = 8000; // Cycles every 8 seconds
+const ROWS_PER_PAGE = 13;      // 13 Agents per page
+const ROTATION_INTERVAL = 4000; // Cycles every 4 seconds
 let currentPage = 0;
 let cachedRows = [];
 let cachedTotals = null;
