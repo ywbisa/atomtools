@@ -5,53 +5,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ATOM Weekly Tracker</title>
   
-  <!-- BROWSER TAB ICON (FAVICON) -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23121212'/><text x='50%' y='68%' font-family='sans-serif' font-weight='900' font-size='52' fill='%23D1C2A5' text-anchor='middle'>WT</text></svg>">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
     :root {
       --bg-color: #080808;
-      --card-bg: #121212;
-      --border-color: #262626;
+      --card-bg: #0d0d0d;
+      --border-color: #222222;
       --brand-beige: #D1C2A5;
       --text-main: #EEEEEE;
       --text-muted: #888888;
-      --table-row-even: #161616;
-      --accent-blue: #3b82f6;
-      --accent-red: #ef4444;
-      --accent-green: #22c55e;
+      
+      --gs-header-assignee-bg: #dbe5f1;
+      --gs-header-metrics-bg: #7b92b3;
+      --gs-header-text: #ffffff;
+      --gs-row-even: #f3f3f3;
+      --gs-row-odd: #ffffff;
+      --gs-border: #d9d9d9;
+      --gs-text: #000000;
+      --gs-total-bg: #e0e0e0;
     }
 
     * { box-sizing: border-box; }
 
     body { 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
       background-color: var(--bg-color); 
       color: var(--text-main);
       margin: 0;
-      padding: 20px 12px;
+      padding: 10px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
+      font-size: 14px;
     }
 
-    /* ATOMS BRAND HEADER */
     .brand-header {
       width: 100%;
-      max-width: 1000px;
-      margin-bottom: 16px;
+      max-width: 1200px;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 12px;
+      padding-bottom: 8px;
       border-bottom: 1px solid var(--border-color);
     }
 
     .brand-title {
       font-weight: 800;
-      font-size: 18px;
-      letter-spacing: 2px;
+      font-size: 16px;
+      letter-spacing: 1.5px;
       color: var(--brand-beige);
       text-transform: uppercase;
     }
@@ -59,9 +64,9 @@
     .status-badge {
       font-size: 10px;
       color: #22c55e;
-      background: #1a1a1a;
-      padding: 4px 10px;
-      border-radius: 20px;
+      background: #141414;
+      padding: 3px 8px;
+      border-radius: 12px;
       border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
@@ -74,68 +79,74 @@
       height: 5px;
       background-color: #22c55e;
       border-radius: 50%;
-      box-shadow: 0 0 5px #22c55e;
+      box-shadow: 0 0 4px #22c55e;
     }
 
-    /* CARD CONTAINER */
     .card { 
       background: var(--card-bg); 
-      padding: 16px 18px; 
-      border-radius: 10px; 
+      padding: 12px; 
+      border-radius: 6px; 
       border: 1px solid var(--border-color);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
       width: 100%;
-      max-width: 1000px; 
-      margin-bottom: 20px;
+      max-width: 1200px; 
+      margin-bottom: 12px;
     }
 
     .card-title {
       margin-top: 0;
-      margin-bottom: 14px;
-      font-size: 14px;
-      font-weight: 600;
+      margin-bottom: 10px;
+      font-size: 13px;
+      font-weight: 700;
       letter-spacing: 0.5px;
       color: var(--text-main);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .card-title::before {
       content: '';
       display: inline-block;
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       background-color: var(--brand-beige);
-      border-radius: 2px;
+      border-radius: 1px;
     }
 
-    /* CONTROLS SECTION */
-    .controls { 
-      display: flex; 
-      gap: 16px; 
-      align-items: flex-end; 
-      margin-bottom: 16px;
-      background: #1a1a1a;
-      padding: 12px 14px;
-      border-radius: 8px;
+    .controls-wrapper {
+      background: #141414;
+      padding: 10px;
+      border-radius: 4px;
       border: 1px solid var(--border-color);
-      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .file-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
     }
 
     .control-group { 
       display: flex; 
       flex-direction: column; 
-      gap: 4px; 
-      font-size: 11px;
+      gap: 3px; 
+      font-size: 10px;
       color: var(--text-muted);
     }
 
-    /* DRAG & DROP ZONE STYLES */
+    .file-slot-label {
+      font-weight: bold;
+      color: var(--brand-beige);
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+
     .drop-zone {
-      border: 2px dashed var(--border-color);
-      border-radius: 6px;
-      padding: 10px 16px;
+      border: 1px dashed #3a3a3c;
+      border-radius: 4px;
+      padding: 4px 6px;
       text-align: center;
       background-color: #080808;
       cursor: pointer;
@@ -144,17 +155,21 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-width: 200px;
+      height: 38px;
     }
 
     .drop-zone:hover, .drop-zone.dragover {
       border-color: var(--brand-beige);
-      background-color: #141414;
+      background-color: #1a1a1a;
     }
 
     .drop-zone-text {
-      font-size: 11px;
+      font-size: 9px;
       color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     .drop-zone-text span {
@@ -162,122 +177,147 @@
       font-weight: 600;
     }
 
-    input[type="file"] {
-      display: none;
-    }
+    input[type="file"] { display: none; }
 
-    input[type="number"], select { 
-      padding: 4px 8px; 
+    input[type="number"] { 
+      padding: 4px 6px; 
       border: 1px solid var(--border-color); 
       border-radius: 4px; 
       font-size: 11px; 
       background-color: #080808;
       color: var(--text-main);
-      height: 27px;
+      width: 60px;
+      height: 32px;
+      outline: none;
     }
 
-    input[type="number"] {
-      width: 65px;
+    .date-filter-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .date-input-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-main);
+    }
+
+    .action-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-start;
     }
 
     button { 
       background-color: var(--brand-beige); 
       color: #080808; 
       border: none; 
-      padding: 0 16px; 
+      padding: 0 14px; 
       border-radius: 4px; 
       cursor: pointer; 
       font-weight: 700; 
       font-size: 11px; 
-      height: 27px;
+      height: 32px;
       transition: opacity 0.2s ease;
     }
 
-    button:hover { 
-      opacity: 0.85; 
+    button:hover { opacity: 0.85; }
+
+    .btn-clear {
+      background-color: #333333;
+      color: #ffffff;
+    }
+
+    .btn-copy {
+      background-color: #0284c7;
+      color: #ffffff;
+      margin-left: auto;
     }
 
     #status { 
-      margin-bottom: 10px; 
+      margin-bottom: 8px; 
       font-weight: 600; 
       font-size: 11px; 
     }
 
-    /* COMPACT TABLE STYLES */
     .table-container {
       width: 100%;
       overflow-x: auto;
+      background-color: #ffffff;
     }
 
     table { 
       width: 100%; 
       border-collapse: separate; 
       border-spacing: 0;
-      font-size: 11px; 
-      color: var(--text-main);
+      background-color: #ffffff;
+      border-top: 1px solid var(--gs-border);
+      border-left: 1px solid var(--gs-border);
+      font-family: Arial, sans-serif;
+    }
+
+    th, td { 
+      border-right: 1px solid var(--gs-border);
+      border-bottom: 1px solid var(--gs-border);
+      padding: 4px 8px; 
+      text-align: center !important; 
+      font-size: 13px;
+      line-height: 1.25;
+      color: var(--gs-text);
+      font-variant-numeric: tabular-nums;
     }
 
     th { 
-      background-color: #1a1a1a; 
-      color: var(--brand-beige); 
+      background-color: var(--gs-header-metrics-bg) !important; 
+      color: var(--gs-header-text) !important; 
       padding: 6px 8px; 
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      font-size: 9px;
-      border-top: 1px solid var(--border-color);
-      border-bottom: 1px solid var(--border-color);
-      text-align: center; 
+      font-weight: normal !important;
+      font-size: 13px;
     }
 
-    th:first-child { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }
-    th:last-child { border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
-
-    td { 
-      padding: 5px 8px; 
-      border-bottom: 1px solid #1f1f1f; 
-      text-align: center; 
-      line-height: 1.2;
+    th.assignee-header {
+      background-color: var(--gs-header-assignee-bg) !important;
+      color: #000000 !important;
+      font-style: italic;
+      text-align: left !important;
+      font-weight: normal !important;
     }
 
-    tr:nth-child(even) td { 
-      background-color: var(--table-row-even); 
-    }
-
-    tr:hover td {
-      background-color: #222222;
-    }
+    tr:nth-child(even) td { background-color: var(--gs-row-even); }
+    tr:nth-child(odd) td { background-color: var(--gs-row-odd); }
+    tr:hover td { background-color: #e8f0fe; }
 
     .text-left { 
       text-align: left !important; 
-      font-weight: 600; 
-      color: var(--text-main);
+      font-weight: normal !important; 
+      color: #000000 !important;
     }
 
     .summary-row td { 
-      font-weight: bold; 
-      background-color: #1c1917 !important; 
-      color: var(--brand-beige);
-      border-top: 1px solid var(--border-color);
-      border-bottom: 1px solid var(--border-color);
-      padding: 6px 8px;
+      font-weight: 700 !important; 
+      background-color: var(--gs-total-bg) !important; 
+      color: #000000 !important;
+      border-top: 2px solid #000000 !important;
+      border-bottom: 2px solid #000000 !important;
+      padding: 5px 8px;
+      text-align: center !important;
     }
 
-    .expired-tag {
-      color: #f87171;
-      font-weight: 600;
+    .summary-row td.text-left {
+      font-weight: 700 !important;
+      text-align: left !important;
     }
 
-    .info-note {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 4px;
-      line-height: 1.4;
-    }
-
-    /* FOOTER BRANDING */
     .brand-footer {
-      margin-top: 28px;
+      margin-top: 16px;
       font-size: 10px;
       color: var(--text-muted);
       letter-spacing: 1px;
@@ -287,7 +327,6 @@
 </head>
 <body>
 
-  <!-- TOP BRAND HEADER -->
   <div class="brand-header">
     <div class="brand-title">ATOMS Weekly Tracker</div>
     <div class="status-badge">
@@ -296,43 +335,90 @@
     </div>
   </div>
 
-  <!-- MAIN DASHBOARD CARD -->
   <div class="card">
-    <div class="card-title">Weekly Ticket Summary Processor (Shift: 3:00 PM - 8:00 AM)</div>
+    <div class="card-title">Weekly Ticket Summary Processor (Productivity Excludes Expired Tickets)</div>
     
-    <div class="controls">
-      <div class="control-group">
-        <label><b>Upload CSV File:</b></label>
-        <div class="drop-zone" id="dropZone">
-          <div class="drop-zone-text" id="dropZoneText">Drag & drop CSV here or <span>browse</span></div>
-          <input type="file" id="csvFile" accept=".csv">
+    <div class="controls-wrapper">
+      <div class="file-grid">
+        <div class="control-group">
+          <span class="file-slot-label">File 1 (Sun / Day 1)</span>
+          <div class="drop-zone" id="dropZone1">
+            <div class="drop-zone-text" id="dropZoneText1">Drop CSV 1 or <span>browse</span></div>
+            <input type="file" class="csv-input" id="csvFile1" accept=".csv">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <span class="file-slot-label">File 2 (Mon / Day 2)</span>
+          <div class="drop-zone" id="dropZone2">
+            <div class="drop-zone-text" id="dropZoneText2">Drop CSV 2 or <span>browse</span></div>
+            <input type="file" class="csv-input" id="csvFile2" accept=".csv">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <span class="file-slot-label">File 3 (Tue / Day 3)</span>
+          <div class="drop-zone" id="dropZone3">
+            <div class="drop-zone-text" id="dropZoneText3">Drop CSV 3 or <span>browse</span></div>
+            <input type="file" class="csv-input" id="csvFile3" accept=".csv">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <span class="file-slot-label">File 4 (Wed / Day 4)</span>
+          <div class="drop-zone" id="dropZone4">
+            <div class="drop-zone-text" id="dropZoneText4">Drop CSV 4 or <span>browse</span></div>
+            <input type="file" class="csv-input" id="csvFile4" accept=".csv">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <span class="file-slot-label">File 5 (Thu / Day 5)</span>
+          <div class="drop-zone" id="dropZone5">
+            <div class="drop-zone-text" id="dropZoneText5">Drop CSV 5 or <span>browse</span></div>
+            <input type="file" class="csv-input" id="csvFile5" accept=".csv">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <span class="file-slot-label">File 6 (Fri / Day 6)</span>
+          <div class="drop-zone" id="dropZone6">
+            <div class="drop-zone-text" id="dropZoneText6">Drop CSV 6 or <span>browse</span></div>
+            <input type="file" class="csv-input" id="csvFile6" accept=".csv">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <span class="file-slot-label">File 7 (Sat / Day 7)</span>
+          <div class="drop-zone" id="dropZone7">
+            <div class="drop-zone-text" id="dropZoneText7">Drop CSV 7 or <span>browse</span></div>
+            <input type="file" class="csv-input" id="csvFile7" accept=".csv">
+          </div>
         </div>
       </div>
 
-      <div class="control-group">
-        <label><b>Start Day:</b></label>
-        <input type="number" id="startDay" value="" min="1" max="31">
+      <div class="date-filter-container">
+        <div class="date-input-group">
+          <label><b>Start Day (PHT):</b></label>
+          <input type="number" id="startDay" value="11" min="1" max="31">
+        </div>
+        <div class="date-input-group">
+          <label><b>End Day (PHT):</b></label>
+          <input type="number" id="endDay" value="17" min="1" max="31">
+        </div>
+        <span style="font-size: 10px; color: var(--text-muted);">(Captures data between Start and End day numbers)</span>
       </div>
 
-      <div class="control-group">
-        <label><b>End Day:</b></label>
-        <input type="number" id="endDay" value="" min="1" max="31">
+      <div class="action-bar">
+        <button onclick="processWeeklyCSV()">Process Weekly Report</button>
+        <button class="btn-clear" onclick="clearAllFiles()">Reset Files</button>
+        <button class="btn-copy" id="copyBtn" onclick="copyTableToClipboard()">📋 Copy Image to Clipboard</button>
       </div>
-
-      <button onclick="processCSV()">Process Weekly Report</button>
     </div>
 
-    <div id="status" style="margin-top: 10px;"></div>
+    <div id="status"></div>
     <div class="table-container" id="output">
-      <p style="font-size: 11px; color: var(--text-muted);">Upload or drop a CSV file above to generate weekly summary locally.</p>
-    </div>
-  </div>
-
-  <!-- EXPIRED TICKETS INVESTIGATION CARD -->
-  <div class="card">
-    <div class="card-title">Expired Tickets Investigation List (Sorted by Assignee)</div>
-    <div class="table-container" id="expiredOutput">
-      <p style="font-size: 11px; color: var(--text-muted);">Expired tickets within the selected week range will be listed here with Ticket IDs and Timestamps.</p>
+      <p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload 1 to 7 daily production CSV files above and specify the day range to consolidate team productivity.</p>
     </div>
   </div>
 
@@ -341,7 +427,8 @@
   </div>
 
 <script>
-// RFC 4180 Compliant CSV Parser
+const EXCLUDED_AGENTS = ['justine parilla'];
+
 function parseCSV(text) {
   const rows = [];
   let currentRow = [];
@@ -387,92 +474,80 @@ function parseCSV(text) {
 
 function cleanStr(val) {
   if (!val) return '';
-  return val.toString().replace(/^['"\s\ufeff]+|['"\s]+$/g, '').trim();
+  return val.toString().replace(/^['"\s\ufeff]+|['"\s]+\$/g, '').trim();
 }
 
-// Parses standard datetime strings directly
-function parseDate(dateStr) {
-  if (!dateStr) return null;
-  
-  let d = new Date(dateStr);
-  
-  if (isNaN(d.getTime())) {
-    const match = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
-    if (match) {
-      const year = parseInt(match[1], 10);
-      const month = parseInt(match[2], 10) - 1;
-      const day = parseInt(match[3], 10);
-      const hour = parseInt(match[4], 10);
-      const min = parseInt(match[5], 10);
-      const sec = match[6] ? parseInt(match[6], 10) : 0;
-      d = new Date(year, month, day, hour, min, sec);
+for (let i = 1; i <= 7; i++) {
+  const dropZone = document.getElementById(`dropZone${i}`);
+  const csvFileInput = document.getElementById(`csvFile${i}`);
+  const dropZoneText = document.getElementById(`dropZoneText${i}`);
+
+  dropZone.addEventListener('click', () => csvFileInput.click());
+
+  csvFileInput.addEventListener('change', () => {
+    if (csvFileInput.files.length) {
+      dropZoneText.innerHTML = `Loaded: <span>${csvFileInput.files[0].name}</span>`;
     }
-  }
+  });
 
-  if (isNaN(d.getTime())) return null;
-  return d;
-}
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('dragover');
+    }, false);
+  });
 
-// DRAG AND DROP HANDLERS
-const dropZone = document.getElementById('dropZone');
-const csvFileInput = document.getElementById('csvFile');
-const dropZoneText = document.getElementById('dropZoneText');
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('dragover');
+    }, false);
+  });
 
-dropZone.addEventListener('click', () => csvFileInput.click());
+  dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
 
-csvFileInput.addEventListener('change', () => {
-  if (csvFileInput.files.length) {
-    updateDropZoneLabel(csvFileInput.files[0].name);
-  }
-});
-
-['dragenter', 'dragover'].forEach(eventName => {
-  dropZone.addEventListener(eventName, (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.classList.add('dragover');
-  }, false);
-});
-
-['dragleave', 'drop'].forEach(eventName => {
-  dropZone.addEventListener(eventName, (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.classList.remove('dragover');
-  }, false);
-});
-
-dropZone.addEventListener('drop', (e) => {
-  const dt = e.dataTransfer;
-  const files = dt.files;
-
-  if (files.length) {
-    if (files[0].name.endsWith('.csv')) {
-      csvFileInput.files = files;
-      updateDropZoneLabel(files[0].name);
-    } else {
-      alert("Please drop a valid .csv file!");
+    if (files.length) {
+      if (files[0].name.endsWith('.csv')) {
+        csvFileInput.files = files;
+        dropZoneText.innerHTML = `Loaded: <span>${files[0].name}</span>`;
+      } else {
+        alert("Please drop a valid .csv file!");
+      }
     }
-  }
-});
-
-function updateDropZoneLabel(filename) {
-  dropZoneText.innerHTML = `Loaded: <span>${filename}</span>`;
+  });
 }
 
-function processCSV() {
-  const fileInput = document.getElementById('csvFile');
+function clearAllFiles() {
+  for (let i = 1; i <= 7; i++) {
+    const fileInput = document.getElementById(`csvFile${i}`);
+    const dropZoneText = document.getElementById(`dropZoneText${i}`);
+    fileInput.value = "";
+    dropZoneText.innerHTML = `Drop CSV ${i} or <span>browse</span>`;
+  }
+  document.getElementById('status').textContent = "";
+  document.getElementById('output').innerHTML = `<p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload 1 to 7 daily production CSV files above and specify the day range to consolidate team productivity.</p>`;
+}
+
+function readFileAsync(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve({ fileName: file.name, text: e.target.result });
+    reader.onerror = (err) => reject(err);
+    reader.readAsText(file);
+  });
+}
+
+async function processWeeklyCSV() {
+  const statusDiv = document.getElementById('status');
   const startDay = parseInt(document.getElementById('startDay').value, 10);
   const endDay = parseInt(document.getElementById('endDay').value, 10);
-  const statusDiv = document.getElementById('status');
-  
-  if (!fileInput.files.length) {
-    alert("Please select or drop a CSV file first!");
-    return;
-  }
 
   if (isNaN(startDay) || isNaN(endDay)) {
-    alert("Please enter valid start and end day numbers!");
+    alert("Please enter valid Start Day and End Day numbers!");
     return;
   }
 
@@ -481,178 +556,244 @@ function processCSV() {
     return;
   }
 
-  statusDiv.style.color = "var(--brand-beige)";
-  statusDiv.textContent = "Processing CSV locally...";
-
-  const file = fileInput.files[0];
-  const reader = new FileReader();
-
-  reader.onload = function(e) {
-    try {
-      const parsedData = parseCSV(e.target.result);
-      const result = generateWeeklySummary(parsedData, startDay, endDay);
-      
-      if (result) {
-        statusDiv.style.color = "#22c55e";
-        statusDiv.textContent = `✅ Successfully processed local weekly data for Day ${startDay} to Day ${endDay} (Matching Google Sheet Logic).`;
-        renderTable(result.summary);
-        renderExpiredTable(result.expiredList);
-      }
-    } catch(err) {
-      statusDiv.style.color = "#ef4444";
-      statusDiv.textContent = "❌ Error processing CSV: " + err.message;
-      console.error(err);
+  const filesToProcess = [];
+  for (let i = 1; i <= 7; i++) {
+    const fileInput = document.getElementById(`csvFile${i}`);
+    if (fileInput.files.length > 0) {
+      filesToProcess.push(fileInput.files[0]);
     }
-  };
-
-  reader.readAsText(file);
-}
-
-function generateWeeklySummary(rows, startDay, endDay) {
-  if (!rows || rows.length < 2) {
-    alert("CSV file appears to be empty or missing data!");
-    return null;
   }
 
+  if (filesToProcess.length === 0) {
+    alert("Please select or drop at least one CSV file!");
+    return;
+  }
+
+  statusDiv.style.color = "var(--brand-beige)";
+  statusDiv.textContent = `Processing ${filesToProcess.length} CSV file(s) for Day ${startDay} to Day ${endDay}...`;
+
+  try {
+    const readPromises = filesToProcess.map(file => readFileAsync(file));
+    const fileResults = await Promise.all(readPromises);
+
+    const masterStats = {};
+    const seenTicketIds = new Set(); // Prevents double-counting identical tickets across overlapping shift files
+
+    fileResults.forEach(res => {
+      const rows = parseCSV(res.text);
+      accumulateSummary(rows, masterStats, startDay, endDay, seenTicketIds);
+    });
+
+    const rawArray = Object.keys(masterStats).map(name => {
+      const s = masterStats[name];
+      // Expired tickets are excluded from Total Order Disputed / productivity
+      const totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated;
+      const winRateDenom = s.successful + s.denied + s.coolOff;
+      const winRate = winRateDenom > 0 ? (s.successful / winRateDenom * 100) : 0;
+
+      return { 
+        name, 
+        ...s, 
+        totalDispute, 
+        winRate
+      };
+    });
+
+    const qualified = rawArray.filter(a => a.totalDispute >= 1500);
+    const nonQualified = rawArray.filter(a => a.totalDispute < 1500);
+
+    if (qualified.length > 0) {
+      const maxDispute = Math.max(...qualified.map(a => a.totalDispute));
+      const maxWinRate = Math.max(...qualified.map(a => a.winRate));
+
+      qualified.forEach(a => {
+        const prodScore = maxDispute > 0 ? (a.totalDispute / maxDispute) : 0;
+        const winScore = maxWinRate > 0 ? (a.winRate / maxWinRate) : 0;
+        a.compositeScore = (0.5 * prodScore) + (0.5 * winScore);
+      });
+
+      qualified.sort((a, b) => {
+        if (b.compositeScore !== a.compositeScore) return b.compositeScore - a.compositeScore;
+        if (b.successful !== a.successful) return b.successful - a.successful;
+        return b.totalDispute - a.totalDispute;
+      });
+
+      qualified.forEach((a, idx) => {
+        a.ranking = (idx + 1).toString();
+      });
+    }
+
+    nonQualified.forEach(a => {
+      a.ranking = "Not Qualified";
+    });
+
+    nonQualified.sort((a, b) => b.totalDispute - a.totalDispute);
+    const summaryArray = [...qualified, ...nonQualified];
+
+    statusDiv.style.color = "#22c55e";
+    statusDiv.textContent = `✅ Successfully aggregated weekly data (Days ${startDay}–${endDay}) from ${filesToProcess.length} file(s) with expired tickets excluded from productivity.`;
+    renderTable(summaryArray);
+
+  } catch(err) {
+    statusDiv.style.color = "#ef4444";
+    statusDiv.textContent = "❌ Error processing CSV files: " + err.message;
+    console.error(err);
+  }
+}
+
+function accumulateSummary(rows, stats, startDay, endDay, seenTicketIds) {
+  if (!rows || rows.length < 2) return;
+
   const headers = rows[0].map(h => cleanStr(h).toLowerCase());
-  
-  let ticketIdIdx = headers.findIndex(h => h.includes('ticket') || h.includes('id') || h.includes('order'));
-  let statusIdx = headers.findIndex(h => h === 'status' || (h.includes('status') && !h.includes('updated')));
+  let idIdx = headers.findIndex(h => h === 'id' || h === 'ticket id');
   let assigneeIdx = headers.findIndex(h => h.includes('assignee') && !h.includes('updated'));
-  let dateIdx = headers.findIndex(h => h.includes('assignee updated') || h.includes('updated') || h.includes('date'));
+  let statusIdx = headers.findIndex(h => h === 'status' || (h.includes('status') && !h.includes('updated')));
+  
+  let dateIdx = headers.findIndex(h => h.includes('solved'));
+  if (dateIdx === -1) {
+    dateIdx = headers.findIndex(h => h.includes('assignee updated') || h.includes('updated'));
+  }
 
-  if (ticketIdIdx === -1) ticketIdIdx = 0;
-  if (statusIdx === -1) statusIdx = 1;
+  if (idIdx === -1) idIdx = 0;
   if (assigneeIdx === -1) assigneeIdx = 2;
-  if (dateIdx === -1) dateIdx = 9;
-
-  const stats = {};
-  const expiredList = [];
+  if (statusIdx === -1) statusIdx = 1;
+  if (dateIdx === -1) dateIdx = 13;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.length <= Math.max(assigneeIdx, statusIdx, dateIdx)) continue;
 
-    const ticketId = cleanStr(row[ticketIdIdx]);
-    const status = cleanStr(row[statusIdx]);
+    const ticketId = cleanStr(row[idIdx]);
     const assignee = cleanStr(row[assigneeIdx]);
+    const status = cleanStr(row[statusIdx]);
     const updatedStr = cleanStr(row[dateIdx]);
 
     if (!assignee || assignee === '-' || assignee === "'-") continue;
 
-    const dt = parseDate(updatedStr);
-    if (!dt) continue;
+    const assigneeLower = assignee.toLowerCase();
+    if (EXCLUDED_AGENTS.some(ex => assigneeLower.includes(ex))) continue;
 
-    const yr = dt.getFullYear();
-    const mo = dt.getMonth();
+    // Day filter
+    let rowDay = null;
+    if (updatedStr) {
+      const matchIso = updatedStr.match(/\d{4}-\d{2}-(\d{2})/);
+      if (matchIso) {
+        rowDay = parseInt(matchIso[1], 10);
+      } else {
+        const match = updatedStr.match(/-\d{2}-?(\d{2})/);
+        if (match) {
+          rowDay = parseInt(match[1], 10);
+        } else {
+          const parsedDate = new Date(updatedStr);
+          if (!isNaN(parsedDate.getTime())) {
+            rowDay = parsedDate.getDate();
+          }
+        }
+      }
+    }
 
-    const startBoundary = new Date(yr, mo, startDay, 15, 0, 0, 0).getTime();
-    const endBoundary = new Date(yr, mo, endDay + 1, 7, 0, 0, 0).getTime();
-    const shiftedValue = dt.getTime() + (15 * 60 * 60 * 1000);
+    if (rowDay !== null) {
+      if (rowDay < startDay || rowDay > endDay) continue;
+    }
 
-    const isWithinWeeklyShift = (shiftedValue >= startBoundary) && (shiftedValue <= endBoundary);
-
-    if (!isWithinWeeklyShift) continue;
+    // CROSS-FILE DEDUPLICATION BY TICKET ID:
+    if (ticketId && ticketId !== '-' && ticketId !== "'-") {
+      const uniqueKey = ticketId.toLowerCase();
+      if (seenTicketIds.has(uniqueKey)) {
+        continue;
+      }
+      seenTicketIds.add(uniqueKey);
+    }
 
     if (!stats[assignee]) {
-      stats[assignee] = { successful: 0, denied: 0, refunded: 0, coolOff: 0, expired: 0 };
+      stats[assignee] = { 
+        successful: 0, 
+        denied: 0, 
+        refunded: 0, 
+        coolOff: 0, 
+        escalated: 0, 
+        expired: 0
+      };
     }
 
-    const cleanStat = status.trim().toUpperCase();
-    if (cleanStat === 'SUCCESSFUL') stats[assignee].successful++;
-    else if (cleanStat === 'UNSUCCESSFUL') stats[assignee].denied++;
-    else if (cleanStat === 'ALREADY REFUNDED') stats[assignee].refunded++;
-    else if (cleanStat === 'COOL OFF') stats[assignee].coolOff++;
-    else if (cleanStat === 'EXPIRED') {
-      stats[assignee].expired++;
-      
-      expiredList.push({
-        assignee: assignee,
-        ticketId: ticketId || 'N/A',
-        timestamp: updatedStr
-      });
-    }
+    const lowerStatus = status.toLowerCase();
+
+    if (lowerStatus === 'successful') stats[assignee].successful++;
+    else if (lowerStatus === 'unsuccessful' || lowerStatus === 'denied') stats[assignee].denied++;
+    else if (lowerStatus === 'already refunded') stats[assignee].refunded++;
+    else if (lowerStatus === 'cool off') stats[assignee].coolOff++;
+    else if (lowerStatus === 'escalated') stats[assignee].escalated++;
+    else if (lowerStatus === 'expired') stats[assignee].expired++;
   }
-
-  expiredList.sort((a, b) => a.assignee.localeCompare(b.assignee));
-
-  const summary = Object.keys(stats).map(name => {
-    const s = stats[name];
-    
-    const totalDispute = s.successful + s.denied + s.refunded + s.coolOff;
-    
-    const winRateDenom = s.successful + s.denied + s.coolOff;
-    const winRate = winRateDenom > 0 ? (s.successful / winRateDenom * 100).toFixed(2) : "0.00";
-    
-    return { name, ...s, totalDispute, winRate: parseFloat(winRate) };
-  }).sort((a, b) => b.totalDispute - a.totalDispute);
-
-  return { summary, expiredList };
 }
 
 function renderTable(data) {
   const outputDiv = document.getElementById('output');
   if (!data || data.length === 0) {
-    outputDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold; font-size: 11px;">No records found matching criteria for the selected week range.</p>`;
+    outputDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold; font-size: 11px; background: var(--card-bg); padding: 5px;">No records found matching the specified date range criteria across the uploaded files.</p>`;
     return;
   }
 
-  let totals = { succ: 0, den: 0, ref: 0, cool: 0, exp: 0, total: 0 };
-  let html = `<table><thead><tr><th class="text-left">Assignee</th><th>Successful</th><th>Unsuccessful</th><th>Already Refunded</th><th>Cool Off</th><th>Expired</th><th>Total Order Dispute</th><th>Win Rate %</th></tr></thead><tbody>`;
+  let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
+  let html = `<table id="summaryTable"><thead><tr><th class="assignee-header">Assignee</th><th>Successful</th><th>Denied</th><th>Already Refunded</th><th>Cool Off</th><th>Escalated</th><th>Expired</th><th>Total Order Disputed</th><th>Winrate</th><th>Ranking</th></tr></thead><tbody>`;
 
   data.forEach(row => {
     totals.succ += row.successful; totals.den += row.denied; totals.ref += row.refunded;
-    totals.cool += row.coolOff; totals.exp += row.expired;
+    totals.cool += row.coolOff; totals.esc += row.escalated; totals.exp += row.expired;
     totals.total += row.totalDispute;
 
-    html += `<tr>
-      <td class="text-left">${row.name}</td>
-      <td>${row.successful}</td>
-      <td>${row.denied}</td>
-      <td>${row.refunded}</td>
-      <td>${row.coolOff}</td>
-      <td class="${row.expired > 0 ? 'expired-tag' : ''}">${row.expired}</td>
-      <td>${row.totalDispute}</td>
-      <td>${row.winRate.toFixed(2)}%</td>
-    </tr>`;
+    html += `<tr><td class="text-left">${row.name}</td><td>${row.successful}</td><td>${row.denied}</td><td>${row.refunded}</td><td>${row.coolOff}</td><td>${row.escalated}</td><td>${row.expired}</td><td>${row.totalDispute}</td><td>${row.winRate.toFixed(2)}%</td><td>${row.ranking}</td></tr>`;
   });
 
   const overallWinRateDenom = totals.succ + totals.den + totals.cool;
   const overallWinRate = overallWinRateDenom > 0 ? (totals.succ / overallWinRateDenom * 100).toFixed(2) : "0.00";
 
-  html += `<tr class="summary-row">
-    <td class="text-left">Grand Total</td>
-    <td>${totals.succ}</td>
-    <td>${totals.den}</td>
-    <td>${totals.ref}</td>
-    <td>${totals.cool}</td>
-    <td>${totals.exp}</td>
-    <td>${totals.total}</td>
-    <td>${overallWinRate}%</td>
-  </tr></tbody></table>`;
-
+  html += `<tr class="summary-row"><td class="text-left">Grand Total</td><td>${totals.succ}</td><td>${totals.den}</td><td>${totals.ref}</td><td>${totals.cool}</td><td>${totals.esc}</td><td>${totals.exp}</td><td>${totals.total}</td><td>${overallWinRate}%</td><td>-</td></tr></tbody></table>`;
   outputDiv.innerHTML = html;
 }
 
-function renderExpiredTable(expiredList) {
-  const expiredDiv = document.getElementById('expiredOutput');
-  if (!expiredList || expiredList.length === 0) {
-    expiredDiv.innerHTML = `<p style="color:#22c55e; font-weight:600; font-size: 11px;">🎉 No Expired Tickets found for this week range!</p>`;
+async function copyTableToClipboard() {
+  const table = document.getElementById('summaryTable');
+  const btn = document.getElementById('copyBtn');
+
+  if (!table) {
+    alert("Please process weekly CSV files first to generate the table!");
     return;
   }
 
-  let html = `<table><thead><tr><th class="text-left">Assignee</th><th>Expired Ticket ID</th><th>Date / Time</th></tr></thead><tbody>`;
+  try {
+    btn.textContent = "⏳ Copying...";
 
-  expiredList.forEach(item => {
-    html += `<tr>
-      <td class="text-left">${item.assignee}</td>
-      <td><b style="color: var(--brand-beige);">${item.ticketId}</b></td>
-      <td style="color: var(--text-muted);">${item.timestamp}</td>
-    </tr>`;
-  });
+    const canvas = await html2canvas(table, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false
+    });
 
-  html += `</tbody></table>`;
-  expiredDiv.innerHTML = html;
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        alert("Failed to generate image Blob.");
+        btn.textContent = "📋 Copy Image to Clipboard";
+        return;
+      }
+
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+
+      btn.textContent = "✅ Copied to Clipboard!";
+      setTimeout(() => {
+        btn.textContent = "📋 Copy Image to Clipboard";
+      }, 3000);
+
+    }, 'image/png');
+
+  } catch (err) {
+    console.error("Copy failed:", err);
+    alert("Unable to copy directly to clipboard. Check browser permissions!");
+    btn.textContent = "📋 Copy Image to Clipboard";
+  }
 }
 </script>
 </body>
