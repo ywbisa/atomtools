@@ -17,7 +17,7 @@
       --text-muted: #94a3b8;
       
       /* Google Sheets Palette */
-      --gs-header-bg: #4a6585;      /* Steel blue header for crisp white text */
+      --gs-header-bg: #4a6585;      /* Steel blue header */
       --gs-header-text: #ffffff;    /* Pure white header text */
       --gs-row-odd: #ffffff;        /* White row */
       --gs-row-even: #f3f3f3;       /* Light gray row */
@@ -176,7 +176,7 @@
       border: 1px solid #27272a;
     }
 
-    /* FULL WIDTH TABLE CONTAINER (Wraps tightly to table rows, no white background spill) */
+    /* FULL WIDTH TABLE CONTAINER (Transparent background prevents white gap below table) */
     .table-container {
       width: 100%;
       background-color: transparent;
@@ -194,7 +194,7 @@
       background-color: transparent;
     }
 
-    /* COLUMN WIDTH LOCKS (100% total width) */
+    /* COLUMN WIDTH LOCKS */
     .col-assignee { width: 23%; }
     .col-succ     { width: 9%; }
     .col-den      { width: 9%; }
@@ -289,7 +289,6 @@
       font-size: 22px;
     }
 
-    /* SMOOTH TV ROTATION TRANSITION */
     .fade-switch {
       animation: fadeInRow 0.35s ease-in-out;
     }
@@ -328,7 +327,7 @@
       <div class="brand-subtitle">Operations Live Board</div>
     </div>
     <div class="header-right">
-      <div class="page-indicator-badge" id="pageIndicator">Loading...</div>
+      <div class="page-indicator-badge" id="pageIndicator">Live Feed Active</div>
       <div class="status-badge">
         <span class="status-dot"></span>
         <span id="badgeText">Live Feed Active</span>
@@ -359,40 +358,64 @@ const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 let lastChecksum = "";
 
 // TV ROTATION SETTINGS
-const ROWS_PER_PAGE = 13;      // 13 Agents per page
-const ROTATION_INTERVAL = 4000; // Cycles every 4 seconds
+const ROWS_PER_PAGE = 13;      
+const ROTATION_INTERVAL = 4000; 
 let currentPage = 0;
 let cachedRows = [];
 let cachedTotals = null;
 let rotationTimer = null;
 
+// ==========================================
+// MULTI-RELAY FAILOVER ENGINE
+// ==========================================
+// Automatically queries mirror relays if ntfy.sh is blocked on office Wi-Fi
+const RELAY_ENDPOINTS = [
+  `https://push.ox2.fr/${SYNC_TOPIC}/json?poll=1`,
+  `https://ntfy-me.com/${SYNC_TOPIC}/json?poll=1`,
+  `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1`,
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://ntfy.sh/${SYNC_TOPIC}/json?poll=1`)}`
+];
+
+let activeEndpointIndex = 0;
+let isFetching = false;
+
 function pollCloudData() {
-  const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_t=${Date.now()}`;
+  if (isFetching) return;
+  isFetching = true;
 
-  if (typeof fetch === 'function') {
-    fetch(url)
-      .then(res => {
-        if (!res.ok) throw new Error("Status " + res.status);
-        return res.text();
-      })
-      .then(text => processResponse(text))
-      .catch(() => tryXHR(url));
-  } else {
-    tryXHR(url);
-  }
-}
+  const url = RELAY_ENDPOINTS[activeEndpointIndex] + `&_t=${Date.now()}`;
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", url, true);
+  xhr.timeout = 3500; // Fast 3.5s timeout prevents hanging
 
-function tryXHR(url) {
-  try {
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", url, true);
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState === 4 && xhr.status === 200) {
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+      isFetching = false;
+      if (xhr.status === 200 && xhr.responseText && xhr.responseText.trim()) {
         processResponse(xhr.responseText);
+      } else if (xhr.status !== 200) {
+        // Rotate to the next relay mirror on failure
+        activeEndpointIndex = (activeEndpointIndex + 1) % RELAY_ENDPOINTS.length;
       }
-    };
+    }
+  };
+
+  xhr.ontimeout = function() {
+    isFetching = false;
+    activeEndpointIndex = (activeEndpointIndex + 1) % RELAY_ENDPOINTS.length;
+  };
+
+  xhr.onerror = function() {
+    isFetching = false;
+    activeEndpointIndex = (activeEndpointIndex + 1) % RELAY_ENDPOINTS.length;
+  };
+
+  try {
     xhr.send();
-  } catch(e) {}
+  } catch(e) {
+    isFetching = false;
+    activeEndpointIndex = (activeEndpointIndex + 1) % RELAY_ENDPOINTS.length;
+  }
 }
 
 function processResponse(rawText) {
@@ -401,7 +424,9 @@ function processResponse(rawText) {
   const lines = rawText.trim().split('\n');
   for (let i = lines.length - 1; i >= 0; i--) {
     try {
-      const item = JSON.parse(lines[i]);
+      const line = lines[i].trim();
+      if (!line) continue;
+      const item = JSON.parse(line);
       if (item.event === 'message' && item.message) {
         const payload = (typeof item.message === 'string') ? JSON.parse(item.message) : item.message;
         renderReport(payload);
@@ -414,22 +439,33 @@ function processResponse(rawText) {
 function renderReport(payload) {
   if (!payload) return;
 
+  if (typeof payload === 'string') {
+    try { payload = JSON.parse(payload); } catch(e) {}
+  }
+
   const currentChecksum = JSON.stringify(payload);
-  if (currentChecksum === lastChecksum) return; 
+  const tableExists = document.getElementById('summaryTable') !== null;
+  if (tableExists && currentChecksum === lastChecksum) return; 
   lastChecksum = currentChecksum;
 
   const meta = document.getElementById('reportMeta');
   const title = document.getElementById('reportTitle');
 
-  if (payload.day) {
+  if (payload.day && title) {
     title.textContent = `Daily Ticket Summary — Day ${payload.day} (PHT)`;
   }
-  meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
+  if (meta) {
+    meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
+  }
 
-  // UNPACKING ENGINE: Handles both array and object formats
+  // Universal Unpacking
   let rows = [];
-  if (Array.isArray(payload.rows)) {
+  if (Array.isArray(payload)) {
+    rows = payload;
+  } else if (Array.isArray(payload.rows)) {
     rows = payload.rows;
+  } else if (Array.isArray(payload.data)) {
+    rows = payload.data;
   } else if (Array.isArray(payload.r)) {
     rows = payload.r.map(row => ({
       name: row[0],
@@ -444,9 +480,24 @@ function renderReport(payload) {
     }));
   }
 
+  renderTable(rows);
+}
+
+function renderTable(data) {
+  const outputDiv = document.getElementById('output');
+  if (!outputDiv) return;
+
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    outputDiv.innerHTML = `<div class="empty-state">No matching rows found in this report.</div>`;
+    const indicator = document.getElementById('pageIndicator');
+    if (indicator) indicator.textContent = '0 Agents';
+    return;
+  }
+
   // Pre-calculate team Grand Totals
   let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
-  rows.forEach(row => {
+  data.forEach(row => {
+    if (!row) return;
     const s = Number(row.successful) || 0;
     const d = Number(row.denied) || 0;
     const r = Number(row.refunded) || 0;
@@ -469,7 +520,7 @@ function renderReport(payload) {
   const overallWinRateDenom = totals.succ + totals.den + totals.cool;
   totals.overallWinRate = overallWinRateDenom > 0 ? (totals.succ / overallWinRateDenom * 100).toFixed(2) : "0.00";
 
-  cachedRows = rows;
+  cachedRows = data;
   cachedTotals = totals;
   currentPage = 0;
 
@@ -484,11 +535,7 @@ function renderReport(payload) {
 
 function buildTableShell() {
   const outputDiv = document.getElementById('output');
-  if (!cachedRows || cachedRows.length === 0) {
-    outputDiv.innerHTML = `<div class="empty-state">No matching rows found in this report.</div>`;
-    document.getElementById('pageIndicator').textContent = '0 Agents';
-    return;
-  }
+  if (!outputDiv || !cachedRows || cachedRows.length === 0) return;
 
   outputDiv.innerHTML = `
     <table id="summaryTable">
@@ -517,7 +564,7 @@ function buildTableShell() {
         </tr>
       </thead>
       <tbody id="pagedTbody">
-        <!-- Rows dynamically injected here -->
+        <!-- Paged Rows Injected Here -->
       </tbody>
       <tfoot>
         <tr class="summary-row">
@@ -541,8 +588,10 @@ function renderCurrentPage() {
   const indicator = document.getElementById('pageIndicator');
   if (!tbody || !cachedRows || cachedRows.length === 0) return;
 
-  const totalPages = Math.ceil(cachedRows.length / ROWS_PER_PAGE);
-  indicator.textContent = `Page ${currentPage + 1} of ${totalPages} • ${cachedRows.length} Agents`;
+  const totalPages = Math.ceil(cachedRows.length / ROWS_PER_PAGE) || 1;
+  if (indicator) {
+    indicator.textContent = `Page ${currentPage + 1} of ${totalPages} • ${cachedRows.length} Agents`;
+  }
 
   const start = currentPage * ROWS_PER_PAGE;
   const end = start + ROWS_PER_PAGE;
@@ -550,6 +599,7 @@ function renderCurrentPage() {
 
   let rowsHtml = '';
   pageSlice.forEach(row => {
+    if (!row) return;
     const s = Number(row.successful) || 0;
     const d = Number(row.denied) || 0;
     const r = Number(row.refunded) || 0;
@@ -563,7 +613,7 @@ function renderCurrentPage() {
 
     rowsHtml += `
       <tr class="fade-switch">
-        <td class="text-left">${row.name}</td>
+        <td class="text-left">${row.name || ''}</td>
         <td class="metric-num">${s}</td>
         <td class="metric-num">${d}</td>
         <td class="metric-num">${r}</td>
@@ -586,9 +636,19 @@ function nextPage() {
   renderCurrentPage();
 }
 
+// 1. Startup local storage cache load
+try {
+  const localCached = localStorage.getItem('atom_tracker_live_data');
+  if (localCached) {
+    renderReport(JSON.parse(localCached));
+  }
+} catch(e) {}
+
+// 2. Start Polling Cloud Data across failover relays
 pollCloudData();
 setInterval(pollCloudData, 4000);
 
+// 3. Same-browser sync channels
 window.addEventListener('storage', (e) => {
   if (e.key === 'atom_tracker_live_data' && e.newValue) {
     try { renderReport(JSON.parse(e.newValue)); } catch(err) {}
@@ -600,6 +660,13 @@ try {
     if (e.data) renderReport(e.data);
   };
 } catch(e) {}
+
+window.addEventListener('message', (e) => {
+  if (e.data) {
+    if (e.data.atom_tracker_live_data) renderReport(e.data.atom_tracker_live_data);
+    else if (e.data.rows || e.data.r || Array.isArray(e.data)) renderReport(e.data);
+  }
+});
 </script>
 </body>
 </html>
