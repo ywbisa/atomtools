@@ -176,7 +176,7 @@
       border: 1px solid #27272a;
     }
 
-    /* FULL WIDTH TABLE CONTAINER (Tightly wraps table rows; no white background spill) */
+    /* FULL WIDTH TABLE CONTAINER */
     .table-container {
       width: 100%;
       background-color: transparent;
@@ -329,7 +329,7 @@
     <div class="header-right">
       <div class="page-indicator-badge" id="pageIndicator">Live Feed Active</div>
       <div class="status-badge">
-        <span class="status-dot"></span>
+        <span class="status-dot" id="statusDot"></span>
         <span id="badgeText">Live Feed Active</span>
       </div>
     </div>
@@ -365,34 +365,81 @@ let cachedRows = [];
 let cachedTotals = null;
 let rotationTimer = null;
 
-// PURE, RELIABLE POLLER (100% compatible with Smart TV browsers)
-function pollCloudData() {
-  const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_t=${Date.now()}`;
+// ==========================================
+// RESILIENT REAL-TIME WEBSOCKET SYNC
+// ==========================================
+let ws = null;
+let wsReconnectTimer = null;
+let isPollingActive = false;
 
-  if (typeof fetch === 'function') {
-    fetch(url)
-      .then(res => {
-        if (!res.ok) throw new Error("Status " + res.status);
-        return res.text();
-      })
-      .then(text => processResponse(text))
-      .catch(() => tryXHR(url));
-  } else {
-    tryXHR(url);
+function connectWebSocket() {
+  if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
+
+  try {
+    const wsUrl = `wss://ntfy.sh/${SYNC_TOPIC}/ws?since=24h`;
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = function() {
+      const meta = document.getElementById('reportMeta');
+      if (meta && meta.textContent.includes('Connecting')) {
+        meta.textContent = 'Live Cloud Stream Connected';
+      }
+    };
+
+    ws.onmessage = function(event) {
+      try {
+        const item = JSON.parse(event.data);
+        if (item.event === 'message' && item.message) {
+          const payload = (typeof item.message === 'string') ? JSON.parse(item.message) : item.message;
+          renderReport(payload);
+        }
+      } catch(e) {}
+    };
+
+    ws.onerror = function() {
+      // If WebSocket fails, initiate HTTP fallback
+      startFallbackPolling();
+    };
+
+    ws.onclose = function() {
+      // Reconnect after 5 seconds
+      wsReconnectTimer = setTimeout(connectWebSocket, 5000);
+    };
+  } catch(e) {
+    startFallbackPolling();
   }
 }
 
-function tryXHR(url) {
-  try {
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", url, true);
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState === 4 && xhr.status === 200) {
+// Fallback HTTP Polling (Gently spaced with timeout to prevent bans)
+let isRequestInProgress = false;
+
+function pollCloudDataFallback() {
+  if (isRequestInProgress) return;
+  isRequestInProgress = true;
+
+  const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_t=${Date.now()}`;
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", url, true);
+  xhr.timeout = 8000; // 8-second timeout prevents network queue stalls
+
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+      isRequestInProgress = false;
+      if (xhr.status === 200) {
         processResponse(xhr.responseText);
       }
-    };
-    xhr.send();
-  } catch(e) {}
+    }
+  };
+  xhr.ontimeout = function() { isRequestInProgress = false; };
+  xhr.onerror = function() { isRequestInProgress = false; };
+  xhr.send();
+}
+
+function startFallbackPolling() {
+  if (isPollingActive) return;
+  isPollingActive = true;
+  pollCloudDataFallback();
+  setInterval(pollCloudDataFallback, 12000); // 12 seconds avoids ntfy IP bans
 }
 
 function processResponse(rawText) {
@@ -496,7 +543,7 @@ function renderReport(payload) {
   }
 }
 
-// Retain global renderTable caller compatibility
+// Preserve external compatibility with admin.html
 function renderTable(data) {
   renderReport({ rows: data });
 }
@@ -537,7 +584,7 @@ function buildTableShell() {
         </tr>
       </thead>
       <tbody id="pagedTbody">
-        <!-- Paged Rows Injected Here -->
+        <!-- Dynamic Paged Rows -->
       </tbody>
       <tfoot>
         <tr class="summary-row">
@@ -609,7 +656,7 @@ function nextPage() {
   renderCurrentPage();
 }
 
-// 1. Check local storage cache on startup
+// 1. Startup local storage cache load
 try {
   const localCached = localStorage.getItem('atom_tracker_live_data');
   if (localCached) {
@@ -617,9 +664,8 @@ try {
   }
 } catch(e) {}
 
-// 2. Start Polling Cloud Data
-pollCloudData();
-setInterval(pollCloudData, 4000);
+// 2. Connect via Real-Time WebSocket
+connectWebSocket();
 
 // 3. Same-browser sync channels
 window.addEventListener('storage', (e) => {
