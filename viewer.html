@@ -17,7 +17,7 @@
       --text-muted: #94a3b8;
       
       /* Google Sheets Palette */
-      --gs-header-bg: #4a6585;      /* Steel blue header */
+      --gs-header-bg: #4a6585;      /* Steel blue header for crisp white text */
       --gs-header-text: #ffffff;    /* Pure white header text */
       --gs-row-odd: #ffffff;        /* White row */
       --gs-row-even: #f3f3f3;       /* Light gray row */
@@ -176,7 +176,7 @@
       border: 1px solid #27272a;
     }
 
-    /* FULL WIDTH TABLE CONTAINER */
+    /* FULL WIDTH TABLE CONTAINER (Wraps tightly to table rows, no white background spill) */
     .table-container {
       width: 100%;
       background-color: transparent;
@@ -194,7 +194,7 @@
       background-color: transparent;
     }
 
-    /* COLUMN WIDTH LOCKS */
+    /* COLUMN WIDTH LOCKS (100% total width) */
     .col-assignee { width: 23%; }
     .col-succ     { width: 9%; }
     .col-den      { width: 9%; }
@@ -289,6 +289,7 @@
       font-size: 22px;
     }
 
+    /* SMOOTH TV ROTATION TRANSITION */
     .fade-switch {
       animation: fadeInRow 0.35s ease-in-out;
     }
@@ -327,7 +328,7 @@
       <div class="brand-subtitle">Operations Live Board</div>
     </div>
     <div class="header-right">
-      <div class="page-indicator-badge" id="pageIndicator">Live Feed Active</div>
+      <div class="page-indicator-badge" id="pageIndicator">Loading...</div>
       <div class="status-badge">
         <span class="status-dot"></span>
         <span id="badgeText">Live Feed Active</span>
@@ -358,47 +359,18 @@ const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 let lastChecksum = "";
 
 // TV ROTATION SETTINGS
-const ROWS_PER_PAGE = 13;      
-const ROTATION_INTERVAL = 4000; 
+const ROWS_PER_PAGE = 13;      // 13 Agents per page
+const ROTATION_INTERVAL = 4000; // Cycles every 4 seconds
 let currentPage = 0;
 let cachedRows = [];
 let cachedTotals = null;
 let rotationTimer = null;
 
-// ==========================================
-// RESILIENT CLOUD SYNC ENGINE
-// ==========================================
-
-// 1. Primary: EventSource (Server-Sent Events) - Real-time push, immune to polling rate limits
-function initEventSource() {
-  if (typeof EventSource !== 'undefined') {
-    try {
-      const sseUrl = `https://ntfy.sh/${SYNC_TOPIC}/sse`;
-      const es = new EventSource(sseUrl);
-
-      es.onmessage = function(e) {
-        try {
-          const item = JSON.parse(e.data);
-          if (item && item.message) {
-            const payload = (typeof item.message === 'string') ? JSON.parse(item.message) : item.message;
-            renderReport(payload);
-          }
-        } catch(err) {}
-      };
-
-      es.onerror = function() {
-        // SSE encountered network blip; pollCloudData acts as fallback
-      };
-    } catch(e) {}
-  }
-}
-
-// 2. Secondary: Periodic Poll with 10s cooldown (prevents HTTP 429 Too Many Requests)
 function pollCloudData() {
   const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_t=${Date.now()}`;
 
   if (typeof fetch === 'function') {
-    fetch(url, { cache: "no-store" })
+    fetch(url)
       .then(res => {
         if (!res.ok) throw new Error("Status " + res.status);
         return res.text();
@@ -414,7 +386,6 @@ function tryXHR(url) {
   try {
     const xhr = new XMLHttpRequest();
     xhr.open("GET", url, true);
-    xhr.setRequestHeader("Cache-Control", "no-cache");
     xhr.onreadystatechange = function () {
       if (xhr.readyState === 4 && xhr.status === 200) {
         processResponse(xhr.responseText);
@@ -430,9 +401,7 @@ function processResponse(rawText) {
   const lines = rawText.trim().split('\n');
   for (let i = lines.length - 1; i >= 0; i--) {
     try {
-      const line = lines[i].trim();
-      if (!line) continue;
-      const item = JSON.parse(line);
+      const item = JSON.parse(lines[i]);
       if (item.event === 'message' && item.message) {
         const payload = (typeof item.message === 'string') ? JSON.parse(item.message) : item.message;
         renderReport(payload);
@@ -445,33 +414,22 @@ function processResponse(rawText) {
 function renderReport(payload) {
   if (!payload) return;
 
-  if (typeof payload === 'string') {
-    try { payload = JSON.parse(payload); } catch(e) {}
-  }
-
   const currentChecksum = JSON.stringify(payload);
-  const tableExists = document.getElementById('summaryTable') !== null;
-  if (tableExists && currentChecksum === lastChecksum) return; 
+  if (currentChecksum === lastChecksum) return; 
   lastChecksum = currentChecksum;
 
   const meta = document.getElementById('reportMeta');
   const title = document.getElementById('reportTitle');
 
-  if (payload.day && title) {
+  if (payload.day) {
     title.textContent = `Daily Ticket Summary — Day ${payload.day} (PHT)`;
   }
-  if (meta) {
-    meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
-  }
+  meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
 
-  // Universal Unpacking
+  // UNPACKING ENGINE: Handles both array and object formats
   let rows = [];
-  if (Array.isArray(payload)) {
-    rows = payload;
-  } else if (Array.isArray(payload.rows)) {
+  if (Array.isArray(payload.rows)) {
     rows = payload.rows;
-  } else if (Array.isArray(payload.data)) {
-    rows = payload.data;
   } else if (Array.isArray(payload.r)) {
     rows = payload.r.map(row => ({
       name: row[0],
@@ -486,24 +444,9 @@ function renderReport(payload) {
     }));
   }
 
-  renderTable(rows);
-}
-
-function renderTable(data) {
-  const outputDiv = document.getElementById('output');
-  if (!outputDiv) return;
-
-  if (!data || !Array.isArray(data) || data.length === 0) {
-    outputDiv.innerHTML = `<div class="empty-state">No matching rows found in this report.</div>`;
-    const indicator = document.getElementById('pageIndicator');
-    if (indicator) indicator.textContent = '0 Agents';
-    return;
-  }
-
   // Pre-calculate team Grand Totals
   let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
-  data.forEach(row => {
-    if (!row) return;
+  rows.forEach(row => {
     const s = Number(row.successful) || 0;
     const d = Number(row.denied) || 0;
     const r = Number(row.refunded) || 0;
@@ -526,7 +469,7 @@ function renderTable(data) {
   const overallWinRateDenom = totals.succ + totals.den + totals.cool;
   totals.overallWinRate = overallWinRateDenom > 0 ? (totals.succ / overallWinRateDenom * 100).toFixed(2) : "0.00";
 
-  cachedRows = data;
+  cachedRows = rows;
   cachedTotals = totals;
   currentPage = 0;
 
@@ -541,7 +484,11 @@ function renderTable(data) {
 
 function buildTableShell() {
   const outputDiv = document.getElementById('output');
-  if (!outputDiv || !cachedRows || cachedRows.length === 0) return;
+  if (!cachedRows || cachedRows.length === 0) {
+    outputDiv.innerHTML = `<div class="empty-state">No matching rows found in this report.</div>`;
+    document.getElementById('pageIndicator').textContent = '0 Agents';
+    return;
+  }
 
   outputDiv.innerHTML = `
     <table id="summaryTable">
@@ -570,7 +517,7 @@ function buildTableShell() {
         </tr>
       </thead>
       <tbody id="pagedTbody">
-        <!-- Paged Rows Injected Here -->
+        <!-- Rows dynamically injected here -->
       </tbody>
       <tfoot>
         <tr class="summary-row">
@@ -594,10 +541,8 @@ function renderCurrentPage() {
   const indicator = document.getElementById('pageIndicator');
   if (!tbody || !cachedRows || cachedRows.length === 0) return;
 
-  const totalPages = Math.ceil(cachedRows.length / ROWS_PER_PAGE) || 1;
-  if (indicator) {
-    indicator.textContent = `Page ${currentPage + 1} of ${totalPages} • ${cachedRows.length} Agents`;
-  }
+  const totalPages = Math.ceil(cachedRows.length / ROWS_PER_PAGE);
+  indicator.textContent = `Page ${currentPage + 1} of ${totalPages} • ${cachedRows.length} Agents`;
 
   const start = currentPage * ROWS_PER_PAGE;
   const end = start + ROWS_PER_PAGE;
@@ -605,7 +550,6 @@ function renderCurrentPage() {
 
   let rowsHtml = '';
   pageSlice.forEach(row => {
-    if (!row) return;
     const s = Number(row.successful) || 0;
     const d = Number(row.denied) || 0;
     const r = Number(row.refunded) || 0;
@@ -619,7 +563,7 @@ function renderCurrentPage() {
 
     rowsHtml += `
       <tr class="fade-switch">
-        <td class="text-left">${row.name || ''}</td>
+        <td class="text-left">${row.name}</td>
         <td class="metric-num">${s}</td>
         <td class="metric-num">${d}</td>
         <td class="metric-num">${r}</td>
@@ -642,22 +586,9 @@ function nextPage() {
   renderCurrentPage();
 }
 
-// 1. Check local storage cache on startup
-try {
-  const localCached = localStorage.getItem('atom_tracker_live_data');
-  if (localCached) {
-    renderReport(JSON.parse(localCached));
-  }
-} catch(e) {}
-
-// 2. Start EventSource listener
-initEventSource();
-
-// 3. Fallback poller running every 10s (protects against ntfy rate-limits)
 pollCloudData();
-setInterval(pollCloudData, 10000);
+setInterval(pollCloudData, 4000);
 
-// 4. Same-browser sync channels
 window.addEventListener('storage', (e) => {
   if (e.key === 'atom_tracker_live_data' && e.newValue) {
     try { renderReport(JSON.parse(e.newValue)); } catch(err) {}
@@ -665,22 +596,10 @@ window.addEventListener('storage', (e) => {
 });
 
 try {
-  const channel = new BroadcastChannel('atom_tracker_live_channel');
-  channel.onmessage = (e) => {
+  new BroadcastChannel('atom_tracker_live_channel').onmessage = (e) => {
     if (e.data) renderReport(e.data);
   };
 } catch(e) {}
-
-window.addEventListener('message', (e) => {
-  if (e.data) {
-    if (e.data.atom_tracker_live_data) renderReport(e.data.atom_tracker_live_data);
-    else if (e.data.rows || e.data.r || Array.isArray(e.data)) renderReport(e.data);
-  }
-});
-
-// Explicit globals for admin.html compatibility
-window.renderReport = renderReport;
-window.renderTable = renderTable;
 </script>
 </body>
 </html>
