@@ -185,7 +185,7 @@
       overflow: hidden;
     }
 
-    /* STANDARD FULL-WIDTH HTML TABLE */
+    /* STANDARD FULL-WIDTH TABLE */
     table { 
       width: 100%; 
       table-layout: fixed;
@@ -194,7 +194,7 @@
       background-color: transparent;
     }
 
-    /* COLUMN WIDTH LOCKS (100% total) */
+    /* COLUMN WIDTH LOCKS */
     .col-assignee { width: 23%; }
     .col-succ     { width: 9%; }
     .col-den      { width: 9%; }
@@ -268,7 +268,6 @@
       color: #000000;
     }
 
-    /* PLAIN WINRATE TEXT */
     .winrate-cell {
       font-weight: 800;
       color: #000000;
@@ -290,7 +289,6 @@
       font-size: 22px;
     }
 
-    /* SMOOTH TV ROTATION TRANSITION */
     .fade-switch {
       animation: fadeInRow 0.35s ease-in-out;
     }
@@ -360,18 +358,47 @@ const SYNC_TOPIC = "ywbisa_tracker_live_sync";
 let lastChecksum = "";
 
 // TV ROTATION SETTINGS
-const ROWS_PER_PAGE = 13;      // Agents shown per screen
-const ROTATION_INTERVAL = 4000; // Cycles every 4 seconds
+const ROWS_PER_PAGE = 13;      
+const ROTATION_INTERVAL = 4000; 
 let currentPage = 0;
 let cachedRows = [];
 let cachedTotals = null;
 let rotationTimer = null;
 
+// ==========================================
+// RESILIENT CLOUD SYNC ENGINE
+// ==========================================
+
+// 1. Primary: EventSource (Server-Sent Events) - Real-time push, immune to polling rate limits
+function initEventSource() {
+  if (typeof EventSource !== 'undefined') {
+    try {
+      const sseUrl = `https://ntfy.sh/${SYNC_TOPIC}/sse`;
+      const es = new EventSource(sseUrl);
+
+      es.onmessage = function(e) {
+        try {
+          const item = JSON.parse(e.data);
+          if (item && item.message) {
+            const payload = (typeof item.message === 'string') ? JSON.parse(item.message) : item.message;
+            renderReport(payload);
+          }
+        } catch(err) {}
+      };
+
+      es.onerror = function() {
+        // SSE encountered network blip; pollCloudData acts as fallback
+      };
+    } catch(e) {}
+  }
+}
+
+// 2. Secondary: Periodic Poll with 10s cooldown (prevents HTTP 429 Too Many Requests)
 function pollCloudData() {
   const url = `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h&_t=${Date.now()}`;
 
   if (typeof fetch === 'function') {
-    fetch(url)
+    fetch(url, { cache: "no-store" })
       .then(res => {
         if (!res.ok) throw new Error("Status " + res.status);
         return res.text();
@@ -387,6 +414,7 @@ function tryXHR(url) {
   try {
     const xhr = new XMLHttpRequest();
     xhr.open("GET", url, true);
+    xhr.setRequestHeader("Cache-Control", "no-cache");
     xhr.onreadystatechange = function () {
       if (xhr.readyState === 4 && xhr.status === 200) {
         processResponse(xhr.responseText);
@@ -417,12 +445,10 @@ function processResponse(rawText) {
 function renderReport(payload) {
   if (!payload) return;
 
-  // Normalize string payloads
   if (typeof payload === 'string') {
     try { payload = JSON.parse(payload); } catch(e) {}
   }
 
-  // Prevent redundant re-renders only if table is already on screen
   const currentChecksum = JSON.stringify(payload);
   const tableExists = document.getElementById('summaryTable') !== null;
   if (tableExists && currentChecksum === lastChecksum) return; 
@@ -438,7 +464,7 @@ function renderReport(payload) {
     meta.textContent = payload.updatedAt ? `Last Broadcast: ${payload.updatedAt}` : 'Live Report Active';
   }
 
-  // Universal Unpacking: Supports arrays, payload.rows, payload.r, and payload.data
+  // Universal Unpacking
   let rows = [];
   if (Array.isArray(payload)) {
     rows = payload;
@@ -463,7 +489,6 @@ function renderReport(payload) {
   renderTable(rows);
 }
 
-// Global renderTable restores original caller compatibility
 function renderTable(data) {
   const outputDiv = document.getElementById('output');
   if (!outputDiv) return;
@@ -475,7 +500,7 @@ function renderTable(data) {
     return;
   }
 
-  // Pre-calculate full team totals
+  // Pre-calculate team Grand Totals
   let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
   data.forEach(row => {
     if (!row) return;
@@ -617,7 +642,7 @@ function nextPage() {
   renderCurrentPage();
 }
 
-// 1. Check existing local storage cache immediately on startup
+// 1. Check local storage cache on startup
 try {
   const localCached = localStorage.getItem('atom_tracker_live_data');
   if (localCached) {
@@ -625,18 +650,20 @@ try {
   }
 } catch(e) {}
 
-// 2. Poll ntfy.sh cloud data
-pollCloudData();
-setInterval(pollCloudData, 4000);
+// 2. Start EventSource listener
+initEventSource();
 
-// 3. Listen to localStorage storage events
+// 3. Fallback poller running every 10s (protects against ntfy rate-limits)
+pollCloudData();
+setInterval(pollCloudData, 10000);
+
+// 4. Same-browser sync channels
 window.addEventListener('storage', (e) => {
   if (e.key === 'atom_tracker_live_data' && e.newValue) {
     try { renderReport(JSON.parse(e.newValue)); } catch(err) {}
   }
 });
 
-// 4. Listen to BroadcastChannel events
 try {
   const channel = new BroadcastChannel('atom_tracker_live_channel');
   channel.onmessage = (e) => {
@@ -644,7 +671,6 @@ try {
   };
 } catch(e) {}
 
-// 5. Listen to postMessage across tabs / iframes
 window.addEventListener('message', (e) => {
   if (e.data) {
     if (e.data.atom_tracker_live_data) renderReport(e.data.atom_tracker_live_data);
@@ -652,7 +678,7 @@ window.addEventListener('message', (e) => {
   }
 });
 
-// Explicit global exposure for admin script calls
+// Explicit globals for admin.html compatibility
 window.renderReport = renderReport;
 window.renderTable = renderTable;
 </script>
