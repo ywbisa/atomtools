@@ -176,7 +176,7 @@
       border: 1px solid #27272a;
     }
 
-    /* FULL WIDTH TABLE CONTAINER (Transparent background prevents white gap below table) */
+    /* FULL WIDTH TABLE CONTAINER */
     .table-container {
       width: 100%;
       background-color: transparent;
@@ -366,56 +366,66 @@ let cachedTotals = null;
 let rotationTimer = null;
 
 // ==========================================
-// MULTI-RELAY FAILOVER ENGINE
+// DUAL-CHANNEL AUTO-UPDATE ENGINE
 // ==========================================
-// Automatically queries mirror relays if ntfy.sh is blocked on office Wi-Fi
-const RELAY_ENDPOINTS = [
-  `https://push.ox2.fr/${SYNC_TOPIC}/json?poll=1`,
-  `https://ntfy-me.com/${SYNC_TOPIC}/json?poll=1`,
-  `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1`,
-  `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://ntfy.sh/${SYNC_TOPIC}/json?poll=1`)}`
-];
 
-let activeEndpointIndex = 0;
-let isFetching = false;
+// Channel 1: High-Speed Local Storage Watcher (Auto-updates in <1s on same computer without refresh)
+function checkLocalCache() {
+  try {
+    const localCached = localStorage.getItem('atom_tracker_live_data');
+    if (localCached) {
+      renderReport(JSON.parse(localCached));
+    }
+  } catch(e) {}
+}
+
+// Channel 2: Cloud Relay Poller (Auto-updates TV wallboard over Wi-Fi without refresh)
+const CLOUD_SERVERS = [
+  `https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=24h`,
+  `https://push.ox2.fr/${SYNC_TOPIC}/json?poll=1&since=24h`
+];
+let currentServerIdx = 0;
 
 function pollCloudData() {
-  if (isFetching) return;
-  isFetching = true;
+  const url = CLOUD_SERVERS[currentServerIdx] + `&_t=${Date.now()}`;
 
-  const url = RELAY_ENDPOINTS[activeEndpointIndex] + `&_t=${Date.now()}`;
-  const xhr = new XMLHttpRequest();
-  xhr.open("GET", url, true);
-  xhr.timeout = 3500; // Fast 3.5s timeout prevents hanging
-
-  xhr.onreadystatechange = function () {
-    if (xhr.readyState === 4) {
-      isFetching = false;
-      if (xhr.status === 200 && xhr.responseText && xhr.responseText.trim()) {
-        processResponse(xhr.responseText);
-      } else if (xhr.status !== 200) {
-        // Rotate to the next relay mirror on failure
-        activeEndpointIndex = (activeEndpointIndex + 1) % RELAY_ENDPOINTS.length;
-      }
-    }
-  };
-
-  xhr.ontimeout = function() {
-    isFetching = false;
-    activeEndpointIndex = (activeEndpointIndex + 1) % RELAY_ENDPOINTS.length;
-  };
-
-  xhr.onerror = function() {
-    isFetching = false;
-    activeEndpointIndex = (activeEndpointIndex + 1) % RELAY_ENDPOINTS.length;
-  };
-
-  try {
-    xhr.send();
-  } catch(e) {
-    isFetching = false;
-    activeEndpointIndex = (activeEndpointIndex + 1) % RELAY_ENDPOINTS.length;
+  if (typeof fetch === 'function') {
+    fetch(url)
+      .then(res => {
+        if (!res.ok) throw new Error("Status " + res.status);
+        return res.text();
+      })
+      .then(text => {
+        if (text && text.trim()) {
+          processResponse(text);
+        }
+      })
+      .catch(() => tryXHR(url));
+  } else {
+    tryXHR(url);
   }
+}
+
+function tryXHR(url) {
+  try {
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    xhr.timeout = 3000;
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200 && xhr.responseText && xhr.responseText.trim()) {
+          processResponse(xhr.responseText);
+        } else if (xhr.status !== 200) {
+          // Switch to backup server if primary fails
+          currentServerIdx = (currentServerIdx + 1) % CLOUD_SERVERS.length;
+        }
+      }
+    };
+    xhr.ontimeout = function() {
+      currentServerIdx = (currentServerIdx + 1) % CLOUD_SERVERS.length;
+    };
+    xhr.send();
+  } catch(e) {}
 }
 
 function processResponse(rawText) {
@@ -443,6 +453,7 @@ function renderReport(payload) {
     try { payload = JSON.parse(payload); } catch(e) {}
   }
 
+  // Detect if new broadcast has arrived
   const currentChecksum = JSON.stringify(payload);
   const tableExists = document.getElementById('summaryTable') !== null;
   if (tableExists && currentChecksum === lastChecksum) return; 
@@ -494,7 +505,6 @@ function renderTable(data) {
     return;
   }
 
-  // Pre-calculate team Grand Totals
   let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
   data.forEach(row => {
     if (!row) return;
@@ -564,7 +574,7 @@ function buildTableShell() {
         </tr>
       </thead>
       <tbody id="pagedTbody">
-        <!-- Paged Rows Injected Here -->
+        <!-- Dynamic Paged Rows -->
       </tbody>
       <tfoot>
         <tr class="summary-row">
@@ -636,19 +646,17 @@ function nextPage() {
   renderCurrentPage();
 }
 
-// 1. Startup local storage cache load
-try {
-  const localCached = localStorage.getItem('atom_tracker_live_data');
-  if (localCached) {
-    renderReport(JSON.parse(localCached));
-  }
-} catch(e) {}
+// 1. Check local storage immediately on startup
+checkLocalCache();
 
-// 2. Start Polling Cloud Data across failover relays
+// 2. Poll local storage every 1 second (Auto-updates without refreshing when admin broadcasts)
+setInterval(checkLocalCache, 1000);
+
+// 3. Poll cloud relay every 3.5 seconds (Auto-updates TV wallboard over Wi-Fi without refreshing)
 pollCloudData();
-setInterval(pollCloudData, 4000);
+setInterval(pollCloudData, 3500);
 
-// 3. Same-browser sync channels
+// 4. Same-browser instant event listeners
 window.addEventListener('storage', (e) => {
   if (e.key === 'atom_tracker_live_data' && e.newValue) {
     try { renderReport(JSON.parse(e.newValue)); } catch(err) {}
