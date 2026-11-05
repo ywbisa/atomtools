@@ -101,7 +101,7 @@
       background: #18181b;
       padding: 6px 14px;
       border-radius: 20px;
-      border: 1px solid #27272a;
+      border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -173,7 +173,7 @@
       background: #18181b;
       padding: 6px 14px;
       border-radius: 6px;
-      border: 1px solid #27272a;
+      border: 1px solid var(--border-color);
     }
 
     /* FULL WIDTH TABLE CONTAINER */
@@ -194,16 +194,16 @@
       background-color: transparent;
     }
 
-    /* COLUMN WIDTH LOCKS */
-    .col-assignee { width: 23%; }
+    /* COLUMN WIDTH LOCKS (9 Columns totaling 100%) */
+    .col-assignee { width: 22%; }
+    .col-lob      { width: 10%; }
     .col-succ     { width: 9%; }
     .col-den      { width: 9%; }
     .col-ref      { width: 10%; }
-    .col-cool     { width: 8%; }
-    .col-esc      { width: 8%; }
-    .col-exp      { width: 8%; }
+    .col-cool     { width: 7%; }
+    .col-exp      { width: 7%; }
     .col-total    { width: 13%; }
-    .col-win      { width: 12%; }
+    .col-win      { width: 13%; }
 
     /* TABLE CELLS */
     th, td { 
@@ -256,6 +256,12 @@
       font-weight: 700; 
       color: #000000;
       padding-left: 20px;
+    }
+
+    .lob-cell {
+      font-weight: 700;
+      color: #000000;
+      text-align: center;
     }
 
     .metric-num {
@@ -320,7 +326,7 @@
 </head>
 <body>
 
-  <!-- TV TOP BAR -->
+  <!-- TOP TV STATUS BAR -->
   <div class="brand-header">
     <div class="brand-left">
       <div class="brand-title">ATOMS Daily Tracker</div>
@@ -364,6 +370,78 @@ let currentPage = 0;
 let cachedRows = [];
 let cachedTotals = null;
 let rotationTimer = null;
+
+// ==========================================
+// AGENT LOB DIRECTORY (3PD vs Live Remake)
+// ==========================================
+const LOB_DIRECTORY = {
+  // 3PD AGENTS
+  "aljelleedamalerio": "3PD", "aljeldamalerio": "3PD",
+  "irenedonizazyramaesimbajon": "3PD", "irenesimbajon": "3PD",
+  "kiffedominicbelenson": "3PD", "kiffebelenson": "3PD",
+  "jeussanejoydemoral": "3PD", "jeussanedemoral": "3PD",
+  "gabriellelouiseabajero": "3PD", "gabrielleabajero": "3PD",
+  "jenielpearlople": "3PD", "jenielople": "3PD",
+  "mariajaninecamlahsale": "3PD", "mariasale": "3PD",
+  "danielajanesulelom": "3PD",
+  "jasmineceballos": "3PD",
+  "daisyberonilla": "3PD",
+  "johasmaxuelcamello": "3PD", "johascamello": "3PD",
+  "shairacastillo": "3PD",
+  "genevevbantilan": "3PD",
+  "russeljannguho": "3PD",
+  "renzelkennbuenos": "3PD",
+  "haroldmakiling": "3PD",
+  "laurencejamesquistadio": "3PD",
+  "christianralphantatico": "3PD", "christianantatico": "3PD",
+  "johnkennethturugan": "3PD",
+  "ausiedelima": "3PD",
+  "janevicalolor": "3PD",
+  "marymaymusa": "3PD",
+  "ericagoloran": "3PD",
+  "hannahmautad": "3PD",
+  "jamaicarosales": "3PD",
+  "rheamaebuscano": "3PD",
+  "shemuzzieljustiniani": "3PD", "shemjustiniani": "3PD",
+  "honeyclairetanutan": "3PD",
+
+  // LIVE REMAKE AGENTS
+  "saimorpanganiban": "Live Remake",
+  "melvindejesus": "Live Remake",
+  "chairamaewata": "Live Remake", "chairawata": "Live Remake",
+  "donnacristobal": "Live Remake",
+  "sitihariyadiquituar": "Live Remake", "sitiquituar": "Live Remake",
+  "eronjoshuacasuyac": "Live Remake", "eroncasuyac": "Live Remake",
+  "hazelelaineversuela": "Live Remake", "hazelversuela": "Live Remake",
+  "jovirdomingo": "Live Remake",
+  "kateashleymaglasang": "Live Remake", "katemaglasang": "Live Remake",
+  "markpetersenycong": "Live Remake", "markycong": "Live Remake",
+  "jevelynjamero": "Live Remake",
+  "jenamiesagetarios": "Live Remake"
+};
+
+function getAgentLOB(name) {
+  if (!name) return "-";
+  const clean = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (LOB_DIRECTORY[clean]) return LOB_DIRECTORY[clean];
+
+  // Fallback: Check first and last name combination
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    const fl = (parts[0] + parts[parts.length - 1]).toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (LOB_DIRECTORY[fl]) return LOB_DIRECTORY[fl];
+
+    const first = parts[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    const last = parts[parts.length - 1].toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (const key in LOB_DIRECTORY) {
+      if (key.includes(first) && key.includes(last)) {
+        return LOB_DIRECTORY[key];
+      }
+    }
+  }
+
+  return "-";
+}
 
 // ==========================================
 // DUAL-CHANNEL AUTO-UPDATE ENGINE
@@ -416,7 +494,6 @@ function tryXHR(url) {
         if (xhr.status === 200 && xhr.responseText && xhr.responseText.trim()) {
           processResponse(xhr.responseText);
         } else if (xhr.status !== 200) {
-          // Switch to backup server if primary fails
           currentServerIdx = (currentServerIdx + 1) % CLOUD_SERVERS.length;
         }
       }
@@ -547,15 +624,16 @@ function buildTableShell() {
   const outputDiv = document.getElementById('output');
   if (!outputDiv || !cachedRows || cachedRows.length === 0) return;
 
+  // LOB placed to the left of Successful, Escalated removed
   outputDiv.innerHTML = `
     <table id="summaryTable">
       <colgroup>
         <col class="col-assignee">
+        <col class="col-lob">
         <col class="col-succ">
         <col class="col-den">
         <col class="col-ref">
         <col class="col-cool">
-        <col class="col-esc">
         <col class="col-exp">
         <col class="col-total">
         <col class="col-win">
@@ -563,11 +641,11 @@ function buildTableShell() {
       <thead>
         <tr>
           <th class="assignee-header">Assignee</th>
+          <th>LOB</th>
           <th>Successful</th>
           <th>Denied</th>
           <th>Already Refunded</th>
           <th>Cool Off</th>
-          <th>Escalated</th>
           <th>Expired</th>
           <th>Total Disputed</th>
           <th>Winrate</th>
@@ -578,12 +656,11 @@ function buildTableShell() {
       </tbody>
       <tfoot>
         <tr class="summary-row">
-          <td class="text-left">Grand Total</td>
+          <td class="text-left" colspan="2">Grand Total</td>
           <td class="metric-num">${cachedTotals.succ}</td>
           <td class="metric-num">${cachedTotals.den}</td>
           <td class="metric-num">${cachedTotals.ref}</td>
           <td class="metric-num">${cachedTotals.cool}</td>
-          <td class="metric-num">${cachedTotals.esc}</td>
           <td class="metric-num">${cachedTotals.exp}</td>
           <td class="total-disputed-cell">${cachedTotals.total}</td>
           <td class="winrate-cell">${cachedTotals.overallWinRate}%</td>
@@ -614,21 +691,22 @@ function renderCurrentPage() {
     const d = Number(row.denied) || 0;
     const r = Number(row.refunded) || 0;
     const c = Number(row.coolOff) || 0;
-    const e = Number(row.escalated) || 0;
     const x = Number(row.expired) || 0;
+    const e = Number(row.escalated) || 0;
     const t = (row.totalDispute !== undefined && !isNaN(Number(row.totalDispute))) 
               ? Number(row.totalDispute) 
               : (s + d + r + c + e);
     const w = typeof row.winRate === 'number' ? row.winRate.toFixed(2) : parseFloat(row.winRate || 0).toFixed(2);
+    const agentLob = getAgentLOB(row.name);
 
     rowsHtml += `
       <tr class="fade-switch">
         <td class="text-left">${row.name || ''}</td>
+        <td class="lob-cell">${agentLob}</td>
         <td class="metric-num">${s}</td>
         <td class="metric-num">${d}</td>
         <td class="metric-num">${r}</td>
         <td class="metric-num">${c}</td>
-        <td class="metric-num">${e}</td>
         <td class="metric-num">${x}</td>
         <td class="total-disputed-cell">${t}</td>
         <td class="winrate-cell">${w}%</td>
