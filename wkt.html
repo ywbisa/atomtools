@@ -423,7 +423,7 @@
   </div>
 
   <div class="brand-footer">
-    ATOMS Local Operations &copy; 2026
+    ATOMS Local Operations © 2026
   </div>
 
 <script>
@@ -587,7 +587,14 @@ async function processWeeklyCSV() {
     const rawArray = Object.keys(masterStats).map(name => {
       const s = masterStats[name];
       // Expired tickets are excluded from Total Order Disputed / productivity
-      const totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated;
+      let totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated;
+
+      // Automatically add +200 for Lloyd Propia and Miguel Angelo Geolina
+      const lowerName = name.toLowerCase().trim();
+      if (lowerName.includes('lloyd propia') || lowerName.includes('miguel angelo geolina')) {
+        totalDispute += 200;
+      }
+
       const winRateDenom = s.successful + s.denied + s.coolOff;
       const winRate = winRateDenom > 0 ? (s.successful / winRateDenom * 100) : 0;
 
@@ -631,7 +638,7 @@ async function processWeeklyCSV() {
     const summaryArray = [...qualified, ...nonQualified];
 
     statusDiv.style.color = "#22c55e";
-    statusDiv.textContent = `✅ Successfully aggregated weekly data (Days ${startDay}–${endDay}) from ${filesToProcess.length} file(s) with expired tickets excluded from productivity.`;
+    statusDiv.textContent = `✅ Successfully aggregated weekly data (Days ${startDay}–${endDay}) from ${filesToProcess.length} file(s) with expired tickets excluded and +200 applied to Lloyd & Miguel.`;
     renderTable(summaryArray);
 
   } catch(err) {
