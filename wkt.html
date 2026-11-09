@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ATOM Weekly Tracker</title>
   
-  <!-- BROWSER TAB ICON (FAVICON) -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23121212'/><text x='50%' y='68%' font-family='sans-serif' font-weight='900' font-size='52' fill='%23D1C2A5' text-anchor='middle'>WT</text></svg>">
-
-  <!-- HTML2CANVAS LIBRARY FOR HIGH-QUALITY IMAGE CONVERSION -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
@@ -20,7 +17,6 @@
       --text-main: #EEEEEE;
       --text-muted: #888888;
       
-      /* Google Sheets Color Palette */
       --gs-header-assignee-bg: #dbe5f1;
       --gs-header-metrics-bg: #7b92b3;
       --gs-header-text: #ffffff;
@@ -181,27 +177,18 @@
       font-weight: 600;
     }
 
-    input[type="file"] {
-      display: none;
-    }
+    input[type="file"] { display: none; }
 
-    input[type="number"], select { 
+    input[type="number"] { 
       padding: 4px 6px; 
       border: 1px solid var(--border-color); 
       border-radius: 4px; 
       font-size: 11px; 
       background-color: #080808;
       color: var(--text-main);
+      width: 60px;
       height: 32px;
       outline: none;
-    }
-
-    input[type="number"] {
-      width: 60px;
-    }
-
-    select {
-      cursor: pointer;
     }
 
     .date-filter-container {
@@ -242,9 +229,7 @@
       transition: opacity 0.2s ease;
     }
 
-    button:hover { 
-      opacity: 0.85; 
-    }
+    button:hover { opacity: 0.85; }
 
     .btn-clear {
       background-color: #333333;
@@ -306,17 +291,9 @@
       font-weight: normal !important;
     }
 
-    tr:nth-child(even) td { 
-      background-color: var(--gs-row-even); 
-    }
-
-    tr:nth-child(odd) td { 
-      background-color: var(--gs-row-odd); 
-    }
-
-    tr:hover td {
-      background-color: #e8f0fe;
-    }
+    tr:nth-child(even) td { background-color: var(--gs-row-even); }
+    tr:nth-child(odd) td { background-color: var(--gs-row-odd); }
+    tr:hover td { background-color: #e8f0fe; }
 
     .text-left { 
       text-align: left !important; 
@@ -359,7 +336,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title">Weekly Ticket Summary Processor (TL SLA Logic Applied)</div>
+    <div class="card-title">Weekly Ticket Summary Processor (Synced to TL Rank & Winrate SLA)</div>
     
     <div class="controls-wrapper">
       <div class="file-grid">
@@ -429,15 +406,7 @@
           <label><b>End Day (PHT):</b></label>
           <input type="number" id="endDay" value="7" min="1" max="31">
         </div>
-
-        <div class="date-input-group">
-          <label><b>Duplicate Handling:</b></label>
-          <select id="duplicateMode">
-            <option value="include-all" selected>Capture All (Include Duplicate Tickets)</option>
-            <option value="duplicates-only">Duplicate Tickets Only (Audit Duplicates)</option>
-            <option value="unique-only">Unique Tickets Only (Skip Duplicates)</option>
-          </select>
-        </div>
+        <span style="font-size: 10px; color: var(--text-muted);">(Captures data between Start and End day numbers)</span>
       </div>
 
       <div class="action-bar">
@@ -449,7 +418,7 @@
 
     <div id="status"></div>
     <div class="table-container" id="output">
-      <p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload 1 to 7 daily production CSV files above and select the date range to consolidate team productivity.</p>
+      <p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload 1 to 7 daily production CSV files above and specify the day range to consolidate team productivity.</p>
     </div>
   </div>
 
@@ -499,6 +468,7 @@ function parseCSV(text) {
     currentRow.push(currentVal.trim());
     rows.push(currentRow);
   }
+
   return rows;
 }
 
@@ -539,6 +509,7 @@ for (let i = 1; i <= 7; i++) {
   dropZone.addEventListener('drop', (e) => {
     const dt = e.dataTransfer;
     const files = dt.files;
+
     if (files.length) {
       if (files[0].name.endsWith('.csv')) {
         csvFileInput.files = files;
@@ -574,12 +545,12 @@ async function processWeeklyCSV() {
   const statusDiv = document.getElementById('status');
   const startDay = parseInt(document.getElementById('startDay').value, 10);
   const endDay = parseInt(document.getElementById('endDay').value, 10);
-  const dupMode = document.getElementById('duplicateMode').value;
 
   if (isNaN(startDay) || isNaN(endDay)) {
     alert("Please enter valid Start Day and End Day numbers!");
     return;
   }
+
   if (startDay > endDay) {
     alert("Start Day cannot be greater than End Day!");
     return;
@@ -605,117 +576,30 @@ async function processWeeklyCSV() {
     const readPromises = filesToProcess.map(file => readFileAsync(file));
     const fileResults = await Promise.all(readPromises);
 
-    const filteredRows = [];
-    const ofoCountsPerAgent = new Map();
+    const masterStats = {};
+    const seenTicketIds = new Set(); // Prevents double-counting identical tickets across overlapping shift files
 
     fileResults.forEach(res => {
       const rows = parseCSV(res.text);
-      if (!rows || rows.length < 2) return;
-
-      const headers = rows[0].map(h => cleanStr(h).toLowerCase());
-      let assigneeIdx = headers.findIndex(h => h.includes('assignee') && !h.includes('updated'));
-      let statusIdx = headers.findIndex(h => h === 'status' || (h.includes('status') && !h.includes('updated')));
-      let dateIdx = headers.findIndex(h => h.includes('solved') || h.includes('assignee updated') || h.includes('updated'));
-      let ofoIdx = headers.findIndex(h => h.includes('ofo display') || h.includes('ofo'));
-
-      if (assigneeIdx === -1) assigneeIdx = 2;
-      if (statusIdx === -1) statusIdx = 1;
-      if (dateIdx === -1) dateIdx = 13;
-      if (ofoIdx === -1) ofoIdx = 12;
-
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length <= Math.max(assigneeIdx, statusIdx, dateIdx)) continue;
-
-        const assignee = cleanStr(row[assigneeIdx]);
-        const status = cleanStr(row[statusIdx]);
-        const updatedStr = cleanStr(row[dateIdx]);
-        const ofoId = cleanStr(row[ofoIdx]);
-
-        if (!assignee || assignee === '-' || assignee === "'-") continue;
-
-        const assigneeLower = assignee.toLowerCase();
-        if (EXCLUDED_AGENTS.some(ex => assigneeLower.includes(ex))) continue;
-
-        let rowDay = null;
-        if (updatedStr) {
-          const matchIso = updatedStr.match(/\d{4}-\d{2}-(\d{2})/);
-          if (matchIso) {
-            rowDay = parseInt(matchIso[1], 10);
-          } else {
-            const match = updatedStr.match(/-\d{2}-?(\d{2})/);
-            if (match) {
-              rowDay = parseInt(match[1], 10);
-            } else {
-              const parsedDate = new Date(updatedStr);
-              if (!isNaN(parsedDate.getTime())) {
-                rowDay = parsedDate.getDate();
-              }
-            }
-          }
-        }
-
-        if (rowDay !== null && (rowDay < startDay || rowDay > endDay)) {
-          continue;
-        }
-
-        const agentOfoKey = (assigneeLower + ':::' + ofoId.toLowerCase());
-        ofoCountsPerAgent.set(agentOfoKey, (ofoCountsPerAgent.get(agentOfoKey) || 0) + 1);
-
-        filteredRows.push({
-          assignee,
-          status,
-          ofoId,
-          agentOfoKey
-        });
-      }
-    });
-
-    const masterStats = {};
-    const seenOfoSet = new Set();
-
-    filteredRows.forEach(item => {
-      const { assignee, status, ofoId, agentOfoKey } = item;
-      const hasOfo = ofoId && ofoId !== '-' && ofoId !== "'-";
-
-      if (dupMode === 'unique-only') {
-        if (hasOfo) {
-          if (seenOfoSet.has(agentOfoKey)) return;
-          seenOfoSet.add(agentOfoKey);
-        }
-      } else if (dupMode === 'duplicates-only') {
-        const occurrences = ofoCountsPerAgent.get(agentOfoKey) || 0;
-        if (!hasOfo || occurrences <= 1) {
-          return; 
-        }
-      }
-
-      if (!masterStats[assignee]) {
-        masterStats[assignee] = { 
-          successful: 0, 
-          denied: 0, 
-          refunded: 0, 
-          coolOff: 0, 
-          escalated: 0, 
-          expired: 0
-        };
-      }
-
-      const lowerStatus = status.toLowerCase();
-      if (lowerStatus === 'successful') masterStats[assignee].successful++;
-      else if (lowerStatus === 'unsuccessful' || lowerStatus === 'denied') masterStats[assignee].denied++;
-      else if (lowerStatus === 'already refunded') masterStats[assignee].refunded++;
-      else if (lowerStatus === 'cool off') masterStats[assignee].coolOff++;
-      else if (lowerStatus === 'escalated') masterStats[assignee].escalated++;
-      else if (lowerStatus === 'expired') masterStats[assignee].expired++;
+      accumulateSummary(rows, masterStats, startDay, endDay, seenTicketIds);
     });
 
     const rawArray = Object.keys(masterStats).map(name => {
       const s = masterStats[name];
-      const totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated + s.expired;
       
-      // TL's Winrate Formula: Successful / (Successful + Unsuccessful + Expired + Cool Off)
-      const winRateDenom = s.successful + s.denied + s.expired + s.coolOff;
+      // 1. Total Order Disputed calculation (Excludes Expired)
+      let totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated;
+
+      // Automatically add +200 for Lloyd Propia and Miguel Angelo Geolina
+      const lowerName = name.toLowerCase().trim();
+      if (lowerName.includes('lloyd propia') || lowerName.includes('miguel angelo geolina')) {
+        totalDispute += 200;
+      }
+
+      // 2. Winrate Calculation - TL Formula: Successful / (Successful + Denied + Expired)
+      // Cool Offs and Already Refunded are excluded from the Winrate Denominator.
+      // Expired tickets drop the winrate because they count as missed SLA losses.
+      const winRateDenom = s.successful + s.denied + s.expired;
       const winRate = winRateDenom > 0 ? (s.successful / winRateDenom * 100) : 0;
 
       return { 
@@ -726,11 +610,12 @@ async function processWeeklyCSV() {
       };
     });
 
+    // Determine Qualification limit
     const qualified = rawArray.filter(a => a.totalDispute >= 1500);
     const nonQualified = rawArray.filter(a => a.totalDispute < 1500);
 
-    // TL's Ranking Formula: 50% Productivity + 50% Winrate
     if (qualified.length > 0) {
+      // 3. Ranking Calculation - 50% Productivity Score + 50% Winrate Score
       const maxDispute = Math.max(...qualified.map(a => a.totalDispute));
       const maxWinRate = Math.max(...qualified.map(a => a.winRate));
 
@@ -740,10 +625,11 @@ async function processWeeklyCSV() {
         a.compositeScore = (0.5 * prodScore) + (0.5 * winScore);
       });
 
+      // Sort by Composite Score (Descending)
       qualified.sort((a, b) => {
         if (b.compositeScore !== a.compositeScore) return b.compositeScore - a.compositeScore;
-        if (b.successful !== a.successful) return b.successful - a.successful;
-        return b.totalDispute - a.totalDispute;
+        if (b.totalDispute !== a.totalDispute) return b.totalDispute - a.totalDispute;
+        return b.successful - a.successful;
       });
 
       qualified.forEach((a, idx) => {
@@ -758,12 +644,8 @@ async function processWeeklyCSV() {
     nonQualified.sort((a, b) => b.totalDispute - a.totalDispute);
     const summaryArray = [...qualified, ...nonQualified];
 
-    let modeLabel = "All tickets captured (including duplicates)";
-    if (dupMode === 'duplicates-only') modeLabel = "Filtered to Duplicate Tickets Only";
-    if (dupMode === 'unique-only') modeLabel = "Deduplicated (Unique tickets only)";
-
     statusDiv.style.color = "#22c55e";
-    statusDiv.textContent = `✅ Successfully calculated (TL SLA Logic Applied). Mode: ${modeLabel}.`;
+    statusDiv.textContent = `✅ Successfully aggregated weekly data. Logic matched to TL's tracking structure.`;
     renderTable(summaryArray);
 
   } catch(err) {
@@ -773,15 +655,101 @@ async function processWeeklyCSV() {
   }
 }
 
+function accumulateSummary(rows, stats, startDay, endDay, seenTicketIds) {
+  if (!rows || rows.length < 2) return;
+
+  const headers = rows[0].map(h => cleanStr(h).toLowerCase());
+  let idIdx = headers.findIndex(h => h === 'id' || h === 'ticket id');
+  let assigneeIdx = headers.findIndex(h => h.includes('assignee') && !h.includes('updated'));
+  let statusIdx = headers.findIndex(h => h === 'status' || (h.includes('status') && !h.includes('updated')));
+  
+  let dateIdx = headers.findIndex(h => h.includes('solved'));
+  if (dateIdx === -1) {
+    dateIdx = headers.findIndex(h => h.includes('assignee updated') || h.includes('updated'));
+  }
+
+  if (idIdx === -1) idIdx = 0;
+  if (assigneeIdx === -1) assigneeIdx = 2;
+  if (statusIdx === -1) statusIdx = 1;
+  if (dateIdx === -1) dateIdx = 13;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length <= Math.max(assigneeIdx, statusIdx, dateIdx)) continue;
+
+    const ticketId = cleanStr(row[idIdx]);
+    const assignee = cleanStr(row[assigneeIdx]);
+    const status = cleanStr(row[statusIdx]);
+    const updatedStr = cleanStr(row[dateIdx]);
+
+    if (!assignee || assignee === '-' || assignee === "'-") continue;
+
+    const assigneeLower = assignee.toLowerCase();
+    if (EXCLUDED_AGENTS.some(ex => assigneeLower.includes(ex))) continue;
+
+    // Day filter
+    let rowDay = null;
+    if (updatedStr) {
+      const matchIso = updatedStr.match(/\d{4}-\d{2}-(\d{2})/);
+      if (matchIso) {
+        rowDay = parseInt(matchIso[1], 10);
+      } else {
+        const match = updatedStr.match(/-\d{2}-?(\d{2})/);
+        if (match) {
+          rowDay = parseInt(match[1], 10);
+        } else {
+          const parsedDate = new Date(updatedStr);
+          if (!isNaN(parsedDate.getTime())) {
+            rowDay = parsedDate.getDate();
+          }
+        }
+      }
+    }
+
+    if (rowDay !== null) {
+      if (rowDay < startDay || rowDay > endDay) continue;
+    }
+
+    // CROSS-FILE DEDUPLICATION BY TICKET ID:
+    if (ticketId && ticketId !== '-' && ticketId !== "'-") {
+      const uniqueKey = ticketId.toLowerCase();
+      if (seenTicketIds.has(uniqueKey)) {
+        continue;
+      }
+      seenTicketIds.add(uniqueKey);
+    }
+
+    if (!stats[assignee]) {
+      stats[assignee] = { 
+        successful: 0, 
+        denied: 0, 
+        refunded: 0, 
+        coolOff: 0, 
+        escalated: 0, 
+        expired: 0
+      };
+    }
+
+    const lowerStatus = status.toLowerCase();
+
+    if (lowerStatus === 'successful') stats[assignee].successful++;
+    else if (lowerStatus === 'unsuccessful' || lowerStatus === 'denied') stats[assignee].denied++;
+    else if (lowerStatus === 'already refunded') stats[assignee].refunded++;
+    else if (lowerStatus === 'cool off') stats[assignee].coolOff++;
+    else if (lowerStatus === 'escalated') stats[assignee].escalated++;
+    else if (lowerStatus === 'expired') stats[assignee].expired++;
+  }
+}
+
 function renderTable(data) {
   const outputDiv = document.getElementById('output');
   if (!data || data.length === 0) {
-    outputDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold; font-size: 11px; background: var(--card-bg); padding: 5px;">No records found matching the specified date range and duplicate mode criteria.</p>`;
+    outputDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold; font-size: 11px; background: var(--card-bg); padding: 5px;">No records found matching the specified date range criteria across the uploaded files.</p>`;
     return;
   }
 
   let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
-  let html = `<table id="summaryTable"><thead><tr><th class="assignee-header">Assignee</th><th>Successful</th><th>Unsuccessful</th><th>Already Refunded</th><th>Cool Off</th><th>Escalated</th><th>Expired</th><th>Total Order Disputed</th><th>Winrate</th><th>Ranking</th></tr></thead><tbody>`;
+  let html = `<table id="summaryTable"><thead><tr><th class="assignee-header">Assignee</th><th>Successful</th><th>Denied</th><th>Already Refunded</th><th>Cool Off</th><th>Escalated</th><th>Expired</th><th>Total Order Disputed</th><th>Winrate</th><th>Ranking</th></tr></thead><tbody>`;
 
   data.forEach(row => {
     totals.succ += row.successful; totals.den += row.denied; totals.ref += row.refunded;
@@ -791,8 +759,7 @@ function renderTable(data) {
     html += `<tr><td class="text-left">${row.name}</td><td>${row.successful}</td><td>${row.denied}</td><td>${row.refunded}</td><td>${row.coolOff}</td><td>${row.escalated}</td><td>${row.expired}</td><td>${row.totalDispute}</td><td>${row.winRate.toFixed(2)}%</td><td>${row.ranking}</td></tr>`;
   });
 
-  // Global Winrate using TL SLA Logic
-  const overallWinRateDenom = totals.succ + totals.den + totals.cool + totals.exp;
+  const overallWinRateDenom = totals.succ + totals.den + totals.exp;
   const overallWinRate = overallWinRateDenom > 0 ? (totals.succ / overallWinRateDenom * 100).toFixed(2) : "0.00";
 
   html += `<tr class="summary-row"><td class="text-left">Grand Total</td><td>${totals.succ}</td><td>${totals.den}</td><td>${totals.ref}</td><td>${totals.cool}</td><td>${totals.esc}</td><td>${totals.exp}</td><td>${totals.total}</td><td>${overallWinRate}%</td><td>-</td></tr></tbody></table>`;
