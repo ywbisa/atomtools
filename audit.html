@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATOMS Wrong Tagging QC Audit Tool</title>
+    
+    <!-- FAVICON -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><text x='50%' y='68%' font-family='sans-serif' font-weight='900' font-size='52' fill='%23D1C2A5' text-anchor='middle'>QC</text></svg>">
+
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #111827;
+            --border-color: #1e293b;
+            --brand-beige: #D1C2A5;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --table-row-even: #0f172a;
+            --table-row-odd: #111827;
+            --accent-green: #34d399;
+            --accent-yellow: #fbbf24;
+            --accent-red: #f87171;
+            --accent-blue: #38bdf8;
+        }
+
+        * { box-sizing: border-box; }
+
+        body { 
+            font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-main);
+            margin: 0;
+            padding: 15px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        /* BRAND HEADER */
+        .brand-header {
+            width: 100%;
+            max-width: 1150px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand-title {
+            font-weight: 800;
+            font-size: 16px;
+            letter-spacing: 1.2px;
+            color: var(--brand-beige);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            font-size: 10px;
+            color: var(--accent-green);
+            background: #0f172a;
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 6px var(--accent-green);
+        }
+
+        /* CARD CONTAINERS */
+        .card { 
+            background: var(--card-bg); 
+            padding: 16px; 
+            border-radius: 8px; 
+            border: 1px solid var(--border-color);
+            width: 100%;
+            max-width: 1150px; 
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+
+        /* INPUT & CONTROLS */
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 12px;
+            align-items: flex-end;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .day-input-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* DROP ZONE */
+        .drop-zone {
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            background-color: #0b0f19;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+        }
+
+        .drop-zone * {
+            pointer-events: none;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--brand-beige);
+            background-color: #131d31;
+            color: var(--brand-beige);
+        }
+
+        .drop-zone input[type="file"] { display: none; }
+
+        input[type="number"] {
+            padding: 6px 10px;
+            background-color: #0b0f19;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 600;
+            outline: none;
+            height: 38px;
+            width: 90px;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--brand-beige);
+        }
+
+        .btn-process {
+            background-color: var(--brand-beige);
+            color: #0b0f19;
+            border: none;
+            padding: 0 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 11px;
+            height: 38px;
+            transition: opacity 0.2s ease;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-process:hover {
+            opacity: 0.85;
+        }
+
+        /* SUMMARY METRICS CARDS */
+        .summary-cards { 
+            display: none; 
+            gap: 12px; 
+            margin-bottom: 15px; 
+            width: 100%;
+            max-width: 1150px;
+        }
+
+        .metric-card { 
+            flex: 1; 
+            background: #0f172a; 
+            padding: 12px; 
+            border-radius: 6px; 
+            border: 1px solid var(--border-color); 
+            text-align: center; 
+        }
+
+        .metric-card .number { 
+            font-size: 1.6em; 
+            font-weight: 800; 
+            color: var(--brand-beige); 
+        }
+
+        .metric-card .label { 
+            font-size: 10px; 
+            color: var(--text-muted); 
+            margin-top: 3px; 
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* CONTROLS SECTION */
+        .controls { 
+            display: none; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 12px; 
+            background: #0f172a;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            gap: 10px; 
+        }
+
+        .search-box { 
+            padding: 6px 10px; 
+            font-size: 11px; 
+            font-weight: 500;
+            border: 1px solid var(--border-color); 
+            border-radius: 4px; 
+            background-color: #0b0f19;
+            color: var(--text-main);
+            width: 320px; 
+            outline: none; 
+        }
+
+        .search-box:focus {
+            border-color: var(--brand-beige);
+        }
+
+        /* BUTTONS */
+        .btn-copy {
+            background-color: var(--accent-green);
+            color: #0f172a;
+            border: 1px solid var(--accent-green);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 11px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-copy:hover { 
+            background-color: #059669; 
+            color: #ffffff; 
+        }
+
+        .btn-sheets {
+            background-color: var(--accent-blue);
+            color: #0f172a;
+            border: 1px solid var(--accent-blue);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 11px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-sheets:hover { 
+            background-color: #0284c7; 
+            color: #ffffff; 
+        }
+
+        .btn-restore {
+            background-color: #1e293b;
+            color: var(--brand-beige);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-restore:hover {
+            background-color: #334155;
+            color: #ffffff;
+        }
+
+        /* SPREADSHEET TABLE */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 4px; 
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        th, td { 
+            border: 1px solid var(--border-color); 
+            padding: 6px 10px; 
+            text-align: center; 
+            font-size: 13px; 
+            line-height: 1.3;
+            font-variant-numeric: tabular-nums;
+        }
+
+        th { 
+            background-color: #0f172a !important; 
+            color: var(--brand-beige) !important; 
+            padding: 8px 10px; 
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        tr:nth-child(even) td { 
+            background-color: var(--table-row-even); 
+        }
+
+        tr:nth-child(odd) td { 
+            background-color: var(--table-row-odd); 
+        }
+
+        tr:hover td {
+            background-color: #1e293b !important;
+        }
+
+        .ticket-id {
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--brand-beige);
+        }
+
+        .agent-col {
+            text-align: left !important;
+            color: var(--accent-blue) !important;
+            font-weight: 600;
+        }
+
+        .reason-col {
+            color: var(--accent-yellow) !important;
+            font-weight: 500;
+        }
+
+        .reason-missing {
+            color: var(--accent-red) !important;
+            font-weight: 700;
+            font-style: italic;
+        }
+
+        /* BADGES */
+        .badge { 
+            padding: 2px 8px; 
+            border-radius: 4px; 
+            font-weight: 600; 
+            font-size: 11px; 
+            display: inline-block; 
+            background-color: rgba(248, 113, 113, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        /* ROW HIDE ACTION BUTTON */
+        .btn-hide {
+            background: #1e293b;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-hide:hover {
+            background: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+        }
+
+        /* FOOTER BRANDING */
+        .brand-footer {
+            margin-top: 14px;
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BRAND HEADER -->
+    <div class="brand-header">
+        <div class="brand-title">
+            ⚠️ ATOMS Wrong Tagging QC Audit Tool
+        </div>
+        <div class="status-badge">
+            <span class="status-dot"></span>
+            <span>100% Offline Mode</span>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CARD -->
+    <div class="card">
+        <div class="input-grid">
+            <div class="form-group">
+                <label>1. Upload Record CSV File</label>
+                <div class="drop-zone" id="dropZone">
+                    <span id="dropZoneText">📂 <strong>Drag & drop CSV file here</strong> or <span style="color: var(--brand-beige); text-decoration: underline;">click to browse</span></span>
+                    <input type="file" id="fileInput" accept=".csv">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="filterDay">2. Target Day (Shift: 1 PM - 11 AM)</label>
+                <div class="day-input-group">
+                    <input type="number" id="filterDay" min="1" max="31" placeholder="e.g. 5">
+                    <button class="btn-process" onclick="processData()">Process Target Day Data</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-cards" id="summaryCards">
+            <div class="metric-card">
+                <div class="number" id="totalMistaggedCard">0</div>
+                <div class="label">Mis-Tagged Tickets Found</div>
+            </div>
+            <div class="metric-card">
+                <div class="number" id="affectedAgentsCard">0</div>
+                <div class="label">Affected Agents</div>
+            </div>
+            <div class="metric-card">
+                <div class="number" id="targetDayLabel">All Days</div>
+                <div class="label">Shift Day Evaluated</div>
+            </div>
+        </div>
+
+        <div class="controls" id="controls">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search Ticket ID, Agent Name, or Reason...">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button class="btn-copy" id="copyBtn" onclick="copyToGChat()">📋 Copy to GChat</button>
+                <button class="btn-sheets" id="copySheetsBtn" onclick="copyToSheets()">📊 Copy to Sheets</button>
+                <button class="btn-restore" onclick="restoreAllHiddenRows()">👁️ Restore Hidden (<span id="hiddenCount">0</span>)</button>
+                <span id="rowCount" style="color: var(--text-muted); font-weight: 600; font-size: 10px;"></span>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="auditTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Ticket ID ↕</th>
+                        <th class="agent-col" onclick="sortTable(1)">Agent Name (Assignee) ↕</th>
+                        <th onclick="sortTable(2)">Ticket Status ↕</th>
+                        <th class="reason-col" onclick="sortTable(3)">Unsuccessful Reason (Call) ↕</th>
+                        <th onclick="sortTable(4)">Solved / Timestamp ↕</th>
+                        <th style="width: 70px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        <div id="noDataMessage" style="display: none; text-align: center; padding: 25px; color: var(--accent-green); font-size: 14px; font-weight: bold;">
+            ✅ No Mis-Tagged Tickets Found matching the selected criteria!
+        </div>
+    </div>
+
+    <div class="brand-footer">
+        ATOMS Quality Control Audit © 2026
+    </div>
+
+    <script>
+        // AGENTS TO EXCLUDE FROM QC AUDIT RESULTS
+        const EXCLUDED_AGENTS = [
+            "Justine Parilla",
+            "Chaira Wata",
+            "Donna Cristobal",
+            "Eron Casuyac",
+            "Hazel Versuela",
+            "Jovir Domingo",
+            "Jenamie Sagetarios",
+            "Jevelyn Jamero",
+            "Kate Maglasang",
+            "Mark Ycong",
+            "Siti Quituar",
+            "Melvin De Jesus",
+            "Saimor Panganiban"
+        ];
+
+        let rawDataset = [];
+        let filteredDataset = [];
+        let hiddenTicketIds = new Set();
+        let loadedCsvContent = null;
+        let loadedFileName = "";
+        let sortCol = 1; // Default: Agent Name
+        let sortAsc = true;
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const filterDayInput = document.getElementById('filterDay');
+
+        // --- BULLETPROOF DRAG AND DROP ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            if (files.length > 0) {
+                fileInput.files = files; 
+                processFile(files[0]);
+            }
+        }, false);
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) processFile(e.target.files[0]);
+        });
+
+        filterDayInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') processData();
+        });
+
+        function processFile(file) {
+            loadedFileName = file.name;
+            document.getElementById('dropZoneText').innerHTML = `Loaded: <strong>${file.name}</strong>`;
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                loadedCsvContent = e.target.result;
+                parseCSVText(loadedCsvContent, loadedFileName);
+            };
+
+            reader.readAsText(file);
+        }
+
+        function processData() {
+            if (!loadedCsvContent) {
+                alert("Please upload a CSV file first!");
+                return;
+            }
+            parseCSVText(loadedCsvContent, loadedFileName);
+        }
+
+        // PHT SHIFT TIME MATCHING LOGIC
+        function parseRawTimestamp(dateStr) {
+            if (!dateStr || dateStr === "'-" || dateStr === "-") return null;
+            let cleanStr = dateStr.trim();
+            let parts = cleanStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+            if (parts) {
+                return new Date(Date.UTC(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5])));
+            }
+            let d = new Date(cleanStr);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        function isSamePHTShiftDay(dateStr, targetDay) {
+            if (!dateStr) return false;
+
+            let parsedDate = parseRawTimestamp(dateStr);
+            
+            if (!parsedDate) {
+                const match = dateStr.match(/-\d{2}-?(\d{2})/);
+                return match ? parseInt(match[1], 10) === parseInt(targetDay, 10) : false;
+            }
+
+            let phtTime = new Date(parsedDate.getTime() + (8 * 60 * 60 * 1000));
+            let hour = phtTime.getUTCHours();
+            let day = phtTime.getUTCDate();
+
+            if (hour >= 13 && day === parseInt(targetDay, 10)) {
+                return true;
+            } else if (hour <= 11) {
+                let prevDayDate = new Date(phtTime.getTime() - (24 * 60 * 60 * 1000));
+                if (prevDayDate.getUTCDate() === parseInt(targetDay, 10)) {
+                    return true;
+                }
+            } else if (day === parseInt(targetDay, 10)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function isExcludedAgent(assigneeName) {
+            if (!assigneeName) return false;
+            const cleanName = assigneeName.toLowerCase().replace(/\s+/g, ' ').trim();
+            return EXCLUDED_AGENTS.some(excluded => {
+                const cleanExcluded = excluded.toLowerCase().replace(/\s+/g, ' ').trim();
+                if (cleanName === cleanExcluded || cleanName.includes(cleanExcluded)) return true;
+                const parts = cleanExcluded.split(' ');
+                if (parts.length >= 2 && parts.every(part => cleanName.includes(part))) {
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        function parseCSVLine(text) {
+            const result = [];
+            let cell = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                if (c === '"') {
+                    inQuotes = !inQuotes;
+                } else if (c === ',' && !inQuotes) {
+                    result.push(cell.trim());
+                    cell = '';
+                } else {
+                    cell += c;
+                }
+            }
+            result.push(cell.trim());
+            return result;
+        }
+
+        function parseCSVText(csvText, fileName) {
+            const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) {
+                alert('CSV file appears empty or invalid.');
+                return;
+            }
+
+            const targetDayVal = filterDayInput.value ? parseInt(filterDayInput.value, 10) : null;
+            const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"\$/g, '').toLowerCase());
+            
+            let idIdx = headers.findIndex(h => h === 'id' || h.includes('ticket id'));
+            let assigneeIdx = headers.findIndex(h => h.includes('assignee') && !h.includes('updated'));
+            let statusIdx = headers.findIndex(h => h.includes('status') && !h.includes('updated'));
+            let reasonIdx = headers.findIndex(h => h.includes('unsuccessful reason') || h.includes('reason'));
+
+            let solvedIdx = headers.findIndex(h => h === 'solved' || h.includes('solved'));
+            let dateIndices = [];
+
+            if (solvedIdx !== -1) {
+                dateIndices.push(solvedIdx);
+            }
+
+            headers.forEach((h, idx) => {
+                if (idx !== solvedIdx && (h.includes('assignee updated') || h.includes('updated') || h.includes('queried') || h.includes('requested') || h.includes('date'))) {
+                    dateIndices.push(idx);
+                }
+            });
+
+            if (idIdx === -1) idIdx = 0;
+            if (statusIdx === -1) statusIdx = 1;
+            if (assigneeIdx === -1) assigneeIdx = 2;
+            if (reasonIdx === -1) reasonIdx = 9;
+
+            rawDataset = [];
+            hiddenTicketIds.clear();
+            const affectedAgents = new Set();
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = parseCSVLine(lines[i]).map(c => c.replace(/^"|"\$/g, ''));
+                if (cols.length <= Math.max(idIdx, assigneeIdx, statusIdx, reasonIdx)) continue;
+
+                const ticketId = cols[idIdx] || 'N/A';
+                const assignee = cols[assigneeIdx] || 'Unassigned';
+
+                // EXCLUDE SPECIFIED AGENTS
+                if (isExcludedAgent(assignee)) {
+                    continue;
+                }
+
+                const status = (cols[statusIdx] || '').trim();
+                const reason = (cols[reasonIdx] || '').trim();
+                const reasonLower = reason.toLowerCase();
+                const statusLower = status.toLowerCase();
+
+                // EVALUATE UPDATED MIS-TAGGING RULES:
+                let isMisTagged = false;
+                let formattedReason = reason;
+                const isBlank = (!reason || reason === "'-" || reason === "-" || reasonLower === 'nan' || reasonLower === 'null' || reason.trim() === '');
+                const isCancellationReason = reasonLower.includes('cancelled') || reasonLower.includes('canceled');
+
+                // 1. Status: Expired
+                // Expired + Outside of Dispute Window is valid
+                if (statusLower.includes('expired')) {
+                    if (isBlank) {
+                        isMisTagged = true;
+                        formattedReason = '[BLANK / MISSING REASON]';
+                    } else if (reasonLower.includes('outside of dispute window')) {
+                        isMisTagged = false; // Valid
+                    } else if (reasonLower.includes('order successful') || isCancellationReason) {
+                        isMisTagged = true;
+                    }
+                }
+                // 2. Status: Already Refunded
+                // Valid reasons: 'Order Successful', 'Cancelled Order', 'Cancelled by Merchant' (or any cancellation reason)
+                else if (statusLower.includes('already refunded') || statusLower.includes('refunded')) {
+                    if (isBlank) {
+                        isMisTagged = true;
+                        formattedReason = '[BLANK / MISSING REASON]';
+                    } else if (!reasonLower.includes('order successful') && !isCancellationReason) {
+                        isMisTagged = true;
+                    }
+                } 
+                // 3. Status: Successful
+                // Must have 'Order Successful'
+                else if (statusLower.includes('successful') && !statusLower.includes('unsuccessful')) {
+                    if (isBlank) {
+                        isMisTagged = true;
+                        formattedReason = '[BLANK / MISSING REASON]';
+                    } else if (!reasonLower.includes('order successful')) {
+                        isMisTagged = true;
+                    }
+                } 
+                // 4. Status: Unsuccessful
+                // Must have dispute threshold or other valid dispute reasons (not blank, not order successful, not cancelled)
+                else if (statusLower.includes('unsuccessful')) {
+                    if (isBlank) {
+                        isMisTagged = true;
+                        formattedReason = '[BLANK / MISSING REASON]';
+                    } else if (reasonLower.includes('order successful') || isCancellationReason) {
+                        isMisTagged = true;
+                    }
+                } 
+                // 5. Fallback for other status mismatches
+                else {
+                    if (isCancellationReason) {
+                        isMisTagged = true;
+                    } else if (reasonLower.includes('dispute threshold')) {
+                        isMisTagged = true;
+                    }
+                }
+
+                if (!isMisTagged) {
+                    continue;
+                }
+
+                // FILTER BY PHT TARGET DAY (IF SPECIFIED)
+                let recordTimestamp = 'N/A';
+                if (dateIndices.length > 0) {
+                    for (let dIdx of dateIndices) {
+                        if (dIdx < cols.length && cols[dIdx] && cols[dIdx] !== "'-" && cols[dIdx] !== "-") {
+                            recordTimestamp = cols[dIdx];
+                            break;
+                        }
+                    }
+                }
+
+                if (targetDayVal !== null) {
+                    let matchedDate = false;
+                    for (let dIdx of dateIndices) {
+                        if (dIdx < cols.length && cols[dIdx]) {
+                            if (isSamePHTShiftDay(cols[dIdx], targetDayVal)) {
+                                matchedDate = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!matchedDate) continue;
+                }
+
+                affectedAgents.add(assignee);
+
+                rawDataset.push({
+                    id: ticketId,
+                    assignee: assignee,
+                    currentStatus: status,
+                    reason: formattedReason,
+                    timestamp: recordTimestamp
+                });
+            }
+
+            document.getElementById('summaryCards').style.display = 'flex';
+            document.getElementById('controls').style.display = 'flex';
+            
+            document.getElementById('totalMistaggedCard').innerText = rawDataset.length.toLocaleString();
+            document.getElementById('affectedAgentsCard').innerText = affectedAgents.size.toLocaleString();
+            document.getElementById('targetDayLabel').innerText = targetDayVal !== null ? `Day ${targetDayVal}` : 'All Days';
+
+            filterAndRender();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', filterAndRender);
+
+        function filterAndRender() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            
+            filteredDataset = rawDataset.filter(item => 
+                !hiddenTicketIds.has(item.id) && (
+                    item.id.toLowerCase().includes(query) ||
+                    item.assignee.toLowerCase().includes(query) ||
+                    item.reason.toLowerCase().includes(query) ||
+                    item.timestamp.toLowerCase().includes(query)
+                )
+            );
+            
+            filteredDataset.sort((a, b) => {
+                let valA = Object.values(a)[sortCol];
+                let valB = Object.values(b)[sortCol];
+
+                if (typeof valA === 'string') {
+                    return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                } else {
+                    return sortAsc ? valA - valB : valB - valA;
+                }
+            });
+
+            document.getElementById('hiddenCount').innerText = hiddenTicketIds.size;
+            renderTable();
+        }
+
+        function hideRow(ticketId) {
+            hiddenTicketIds.add(ticketId);
+            filterAndRender();
+        }
+
+        function restoreAllHiddenRows() {
+            hiddenTicketIds.clear();
+            filterAndRender();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const table = document.getElementById('auditTable');
+            const noData = document.getElementById('noDataMessage');
+
+            tbody.innerHTML = '';
+
+            document.getElementById('rowCount').innerText = `Showing ${filteredDataset.length.toLocaleString()} mis-tagged ticket(s)`;
+
+            if (filteredDataset.length === 0) {
+                table.style.display = 'none';
+                noData.style.display = 'block';
+                return;
+            }
+
+            table.style.display = 'table';
+            noData.style.display = 'none';
+
+            filteredDataset.forEach(row => {
+                const tr = document.createElement('tr');
+                const isBlank = row.reason.includes('[BLANK');
+
+                tr.innerHTML = `
+                    <td class="ticket-id">${escapeHtml(row.id)}</td>
+                    <td class="agent-col">${escapeHtml(row.assignee)}</td>
+                    <td><span class="badge">${escapeHtml(row.currentStatus)}</span></td>
+                    <td class="${isBlank ? 'reason-missing' : 'reason-col'}">${escapeHtml(row.reason)}</td>
+                    <td style="color: var(--text-muted); font-size: 12px; font-weight: 600;">${escapeHtml(row.timestamp)}</td>
+                    <td><button class="btn-hide" onclick="hideRow('${escapeHtml(row.id)}')">👁️ Hide</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function sortTable(colIndex) {
+            if (sortCol === colIndex) {
+                sortAsc = !sortAsc;
+            } else {
+                sortCol = colIndex;
+                sortAsc = (colIndex === 0 || colIndex === 1);
+            }
+            filterAndRender();
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
+        }
+
+        // --- COPY TO GCHAT FUNCTIONALITY ---
+        function copyToGChat() {
+            if (filteredDataset.length === 0) {
+                alert("No data to copy!");
+                return;
+            }
+
+            const headers = ["Ticket ID", "Agent Name", "Ticket Status", "Unsuccessful Reason"];
+            let widths = [headers[0].length, headers[1].length, headers[2].length, headers[3].length];
+            
+            filteredDataset.forEach(row => {
+                if (row.id.length > widths[0]) widths[0] = row.id.length;
+                if (row.assignee.length > widths[1]) widths[1] = row.assignee.length;
+                if (row.currentStatus.length > widths[2]) widths[2] = row.currentStatus.length;
+                if (row.reason.length > widths[3]) widths[3] = row.reason.length;
+            });
+
+            const pad = (str, width) => str.padEnd(width, ' ');
+
+            let lines = [];
+            lines.push(`${pad(headers[0], widths[0])} | ${pad(headers[1], widths[1])} | ${pad(headers[2], widths[2])} | ${pad(headers[3], widths[3])}`);
+            lines.push(`${'-'.repeat(widths[0])}-|-${'-'.repeat(widths[1])}-|-${'-'.repeat(widths[2])}-|-${'-'.repeat(widths[3])}`);
+            
+            filteredDataset.forEach(row => {
+                lines.push(`${pad(row.id, widths[0])} | ${pad(row.assignee, widths[1])} | ${pad(row.currentStatus, widths[2])} | ${pad(row.reason, widths[3])}`);
+            });
+
+            const textToCopy = "```\n" + lines.join('\n') + "\n```";
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const btn = document.getElementById('copyBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = "✅ Copied to Clipboard!";
+                setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+            }).catch(err => {
+                console.error("Failed to copy: ", err);
+                alert("Failed to copy to clipboard.");
+            });
+        }
+
+        // --- COPY TO SHEETS FUNCTIONALITY (ROWS ONLY) ---
+        function copyToSheets() {
+            if (filteredDataset.length === 0) {
+                alert("No data to copy!");
+                return;
+            }
+
+            let lines = [];
+            filteredDataset.forEach(row => {
+                lines.push([row.id, row.assignee, row.currentStatus, row.reason, row.timestamp].join('\t'));
+            });
+
+            const textToCopy = lines.join('\n');
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const btn = document.getElementById('copySheetsBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = "✅ Copied for Sheets!";
+                setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+            }).catch(err => {
+                console.error("Failed to copy: ", err);
+                alert("Failed to copy to clipboard.");
+            });
+        }
+    </script>
+</body>
+</html>

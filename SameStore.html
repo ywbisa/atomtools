@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Fraud & Workload Auditor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --primary: #0f172a;
+            --primary-hover: #334155;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --call-bg: #f8fafc;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --warning: #b45309;
+            --warning-bg: #fefce8;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 32px 24px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 1050px; margin: 0 auto; }
+        
+        .header-section { margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+        h1 { font-size: 1.875rem; font-weight: 700; margin: 0 0 8px 0; color: var(--text-dark); letter-spacing: -0.025em; }
+        p.subtitle { color: var(--text-muted); margin: 0; font-size: 0.95rem; line-height: 1.5; }
+
+        /* Dropzone */
+        .dropzone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            background-color: #f1f5f9;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .dropzone:hover { background-color: #e2e8f0; border-color: #94a3b8; }
+        .dropzone.dragover { background-color: #dbeafe; border-color: var(--accent); }
+        .dropzone p { margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-dark); }
+        .dropzone span { display: block; margin-top: 6px; font-size: 0.9rem; color: var(--text-muted); }
+        .file-loaded-status { margin-top: 12px; font-weight: 600; color: var(--success); font-size: 0.95rem; }
+        input[type="file"] { display: none; }
+
+        /* Controls */
+        .controls-card {
+            margin-top: 24px;
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .controls-grid { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+        .control-group { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 150px; }
+        .control-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .input-field {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            font-family: inherit;
+        }
+        .input-field:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .btn-process {
+            background-color: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 10px 28px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            height: 42px;
+            transition: background-color 0.15s ease;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .btn-process:hover { background-color: var(--primary-hover); }
+        
+        .shift-notice {
+            margin-top: 16px;
+            font-size: 0.875rem;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Accordion Cards */
+        .agent-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-top: 24px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .agent-header {
+            padding: 18px 24px;
+            background: var(--card-bg);
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid transparent;
+            transition: background-color 0.15s ease;
+        }
+        .agent-header:hover { background: #f8fafc; }
+        .agent-card.active .agent-header { border-bottom: 1px solid var(--border); background: #f8fafc; }
+        
+        .agent-stats { 
+            font-size: 0.88rem; 
+            font-weight: 600;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .stat-orders { color: var(--success); background: var(--success-bg); padding: 5px 14px; border-radius: 20px; border: 1px solid #d1fae5; }
+        .stat-sessions { color: var(--text-muted); }
+        
+        .agent-body { display: none; padding: 24px; background: #fbfbfc; }
+        .agent-card.active .agent-body { display: block; }
+
+        /* Call Groups */
+        .call-group {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: box-shadow 0.15s ease;
+        }
+        .call-group:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        
+        .call-group.fraud-flag {
+            border: 1px solid #f87171;
+            box-shadow: 0 0 0 1px #f87171;
+        }
+        .call-group.abandon-flag {
+            border: 1px solid #fbbf24;
+            box-shadow: 0 0 0 1px #fbbf24;
+        }
+        
+        .call-header {
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+            cursor: pointer;
+            font-weight: 500;
+            user-select: none;
+        }
+        .call-group.fraud-flag .call-header { background-color: var(--danger-bg); }
+        .call-group.abandon-flag .call-header { background-color: var(--warning-bg); }
+        
+        .call-header:hover { background-color: #f1f5f9; }
+        .call-group.fraud-flag .call-header:hover { background-color: #fca5a5; }
+        
+        .badge-container { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .call-title { font-weight: 700; color: var(--text-dark); margin-right: 4px; }
+        
+        .badge { background: #f1f5f9; color: #475569; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
+        .order-badge { background: var(--success-bg); color: var(--success); font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight: 600; border: 1px solid #d1fae5; }
+        .brand-badge { background: #f3e8ff; color: #6b21a8; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight: 600; text-transform: capitalize; }
+        .duration-badge { background: #fffbeb; color: #b45309; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
+        
+        .fraud-badge { 
+            background: var(--danger); color: #ffffff; font-size: 0.75rem; 
+            padding: 4px 10px; border-radius: 12px; font-weight: 700; 
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .abandon-badge {
+            background: #fbbf24; color: #78350f; font-size: 0.75rem; 
+            padding: 4px 10px; border-radius: 12px; font-weight: 700; 
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+
+        .inspect-btn { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+
+        .call-details { display: none; padding: 0; border-top: 1px solid var(--border); }
+        .call-group.fraud-flag .call-details { border-top-color: #fca5a5; }
+        .call-group.abandon-flag .call-details { border-top-color: #fde047; }
+        .call-group.open .call-details { display: block; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left; }
+        th { background-color: #f8fafc; color: var(--text-muted); font-weight: 600; padding: 12px 18px; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+        td { padding: 12px 18px; border-bottom: 1px solid var(--border); color: #334155; }
+        tr:last-child td { border-bottom: none; }
+        
+        .call-group.fraud-flag th { background-color: #fee2e2; color: #991b1b; border-bottom-color: #fca5a5; }
+        .call-group.abandon-flag th { background-color: #fefce8; color: #92400e; border-bottom-color: #fde047; }
+        
+        /* Mother / Child Hierarchy Styling */
+        .mother-row td { background-color: #f0fdf4; font-weight: 600; }
+        .child-row td { background-color: #ffffff; color: #64748b; }
+        .child-row td:first-child { padding-left: 28px; }
+        
+        .call-group.fraud-flag .mother-row td { background-color: #fef2f2; }
+        .call-group.abandon-flag .mother-row td { background-color: #fefce8; }
+        
+        .mother-icon { 
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.75rem; font-weight: 700; color: #065f46; 
+            background-color: #d1fae5; padding: 2px 8px; border-radius: 6px; 
+            margin-left: 6px; border: 1px solid #a7f3d0;
+        }
+        .call-group.fraud-flag .mother-icon { 
+            color: #991b1b; background-color: #fee2e2; border-color: #fca5a5; 
+        }
+
+        .child-icon {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.75rem; font-weight: 600; color: #64748b;
+            background-color: #f1f5f9; padding: 2px 8px; border-radius: 6px;
+            margin-left: 6px; border: 1px solid #e2e8f0;
+        }
+
+        .single-icon {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.75rem; font-weight: 600; color: #334155;
+            background-color: #e2e8f0; padding: 2px 8px; border-radius: 6px;
+            margin-left: 6px;
+        }
+        
+        .mixed-brand-highlight { color: var(--danger); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-section">
+        <h1>Agent Workload & Fraud Auditor</h1>
+        <p class="subtitle">Employs 2-Layer Hybrid Auditing (Store-by-Store Brand Isolation + Cross-Brand Fraud Exposure).</p>
+    </div>
+
+    <!-- Dropzone -->
+    <div class="dropzone" id="dropzone">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <p>Drag & Drop CSV File Here</p>
+        <span>or click to browse your computer</span>
+        <div class="file-loaded-status" id="fileStatus"></div>
+        <input type="file" id="fileInput" accept=".csv">
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-card">
+        <div class="controls-grid">
+            <div class="control-group" style="max-width: 200px;">
+                <label for="targetDayInput">Target Day (Matches Solved Date)</label>
+                <input type="number" id="targetDayInput" class="input-field" placeholder="e.g., 4" min="1" max="31">
+            </div>
+            <div class="control-group">
+                <label for="searchInput">Search Agent</label>
+                <input type="text" id="searchInput" class="input-field" placeholder="Search by name...">
+            </div>
+            <button type="button" class="btn-process" id="processBtn">Audit Workload Data</button>
+        </div>
+        <div class="shift-notice" id="shiftNotice">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 16 14"></polyline></svg>
+            System uses 2-Layer Hybrid Auditor Engine + Strict 1-Mother Authority + Multi-Column Brand Resolution (+15hr PHT offset).
+        </div>
+    </div>
+
+    <div id="output"></div>
+</div>
+
+<script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const fileStatus = document.getElementById('fileStatus');
+    const targetDayInput = document.getElementById('targetDayInput');
+    const searchInput = document.getElementById('searchInput');
+    const processBtn = document.getElementById('processBtn');
+    const output = document.getElementById('output');
+    const shiftNotice = document.getElementById('shiftNotice');
+
+    let rawCsvRows = [];
+
+    // Drag & Drop handlers
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            loadCsvFile(e.dataTransfer.files[0]);
+        }
+    });
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) loadCsvFile(e.target.files[0]);
+    });
+
+    function loadCsvFile(file) {
+        fileStatus.innerHTML = `✓ Loaded: ${file.name}`;
+        Papa.parse(file, {
+            header: false,
+            skipEmptyLines: true,
+            complete: function(results) { rawCsvRows = results.data; }
+        });
+    }
+
+    // MULTI-COLUMN BRAND RESOLUTION ENGINE
+    function getUltimateBrand(storeName, agreementName) {
+        if (!storeName && !agreementName) return "unknown store";
+        let brand = (String(storeName || '') + ' ' + String(agreementName || '')).toLowerCase();
+        
+        if (brand.includes('mcdonald')) return "mcdonald's";
+        if (brand.includes('burger king')) return "burger king";
+        if (brand.includes('panda express')) return "panda express";
+        if (brand.includes('outback')) return "outback steakhouse";
+        if (brand.includes('taco bell')) return "taco bell";
+        if (brand.includes('sweetgreen')) return "sweetgreen";
+        if (brand.includes('wendy')) return "wendy's";
+        if (brand.includes('carl\'s jr') || brand.includes('carls jr')) return "carl's jr";
+        if (brand.includes('jersey mike')) return "jersey mike's";
+        if (brand.includes('hardee')) return "hardee's";
+        if (brand.includes('wingstop') || brand.includes('wingtop')) return "wingstop";
+        if (brand.includes('popeyes')) return "popeyes";
+        if (brand.includes('panera')) return "panera";
+        if (brand.includes('chili')) return "chili's";
+        if (brand.includes('denny')) return "denny's";
+        if (brand.includes('cracker barrel')) return "cracker barrel";
+        if (brand.includes('kfc')) return "kfc";
+        if (brand.includes('little caesars')) return "little caesars";
+        if (brand.includes('qdoba')) return "qdoba";
+        if (brand.includes('ihop')) return "ihop";
+        if (brand.includes('jack in the box')) return "jack in the box";
+        if (brand.includes('papa john')) return "papa john's";
+        if (brand.includes('einstein')) return "einstein bros";
+        if (brand.includes('krispy kreme')) return "krispy kreme";
+        if (brand.includes('potbelly')) return "potbelly";
+        if (brand.includes('noah')) return "noah's bagels";
+        if (brand.includes('first watch')) return "first watch";
+        if (brand.includes('cafe rio')) return "cafe rio";
+        if (brand.includes('mcalister')) return "mcalister's";
+        if (brand.includes('the catch')) return "the catch";
+        
+        let clean = String(storeName || '').replace('®', '').replace('™', '');
+        if (clean.includes('(')) clean = clean.split('(')[0];
+        if (clean.includes(' - ')) clean = clean.split(' - ')[0];
+        
+        return clean.replace(/-$/, '').trim().replace(/\.$/, '').trim();
+    }
+
+    processBtn.addEventListener('click', () => {
+        output.innerHTML = '';
+        if (rawCsvRows.length < 2) { alert('Please load a valid CSV file first.'); return; }
+        const dayValue = targetDayInput.value.trim();
+        if (!dayValue) { alert('Please enter a Target Day.'); return; }
+
+        const targetDay = parseInt(dayValue, 10);
+        const hoursToAdd = 15; // Display timezone offset (+15 PHT)
+        const searchText = searchInput.value.trim().toLowerCase();
+        const parsedTickets = [];
+
+        for (let i = 1; i < rawCsvRows.length; i++) {
+            const row = rawCsvRows[i];
+            const id = row[0] ? row[0].trim() : 'N/A';             
+            const assignee = row[2] ? row[2].trim() : '';          
+            const agreementName = row[3] ? row[3].trim() : ''; 
+            const storeName = row[4] ? row[4].trim() : 'N/A';     
+            const updatedStr = row[8] ? row[8].trim() : '';      
+            const ordersStr = row[10] ? row[10].trim() : '';     
+            const solvedStr = row[13] ? row[13].trim() : '';      
+            
+            if (!assignee || assignee === 'Unassigned') continue;
+            
+            // Match Target Day accurately on Solved Column (Col N) or Updated (Col I)
+            let rowDay = null;
+            const dateToMatch = solvedStr || updatedStr;
+            if (dateToMatch) {
+                const match = dateToMatch.match(/^\d{4}[-/]\d{1,2}[-/](\d{1,2})/);
+                if (match) {
+                    rowDay = parseInt(match[1], 10);
+                } else {
+                    const fallbackMatch = dateToMatch.match(/-\d{2}-?(\d{2})/);
+                    if (fallbackMatch) rowDay = parseInt(fallbackMatch[1], 10);
+                }
+            }
+
+            if (rowDay === targetDay) {
+                const solvedDateRaw = solvedStr ? new Date(solvedStr) : null;
+                const updatedDateRaw = updatedStr ? new Date(updatedStr) : null;
+
+                let solvedDateShifted = null;
+                let updatedDateShifted = null;
+
+                if (solvedDateRaw && !isNaN(solvedDateRaw.getTime())) {
+                    solvedDateShifted = new Date(solvedDateRaw.getTime() + (hoursToAdd * 60 * 60 * 1000));
+                }
+                if (updatedDateRaw && !isNaN(updatedDateRaw.getTime())) {
+                    updatedDateShifted = new Date(updatedDateRaw.getTime() + (hoursToAdd * 60 * 60 * 1000));
+                }
+
+                parsedTickets.push({
+                    id: id,
+                    assignee: assignee,
+                    storeName: storeName,
+                    storeBrand: getUltimateBrand(storeName, agreementName),
+                    ordersStr: ordersStr,
+                    solvedStrRaw: solvedStr || updatedStr,
+                    primaryDatePHT: solvedDateShifted || updatedDateShifted,
+                    secondaryDatePHT: updatedDateShifted || solvedDateShifted
+                });
+            }
+        }
+
+        if (parsedTickets.length === 0) {
+            output.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-muted);">No records found for Target Day ${targetDay}.</div>`;
+            return;
+        }
+
+        const agentMap = {};
+        parsedTickets.forEach(t => {
+            if (!agentMap[t.assignee]) agentMap[t.assignee] = [];
+            agentMap[t.assignee].push(t);
+        });
+
+        const agentNames = Object.keys(agentMap).filter(name => name.toLowerCase().includes(searchText)).sort();
+
+        agentNames.forEach(agent => {
+            const agentTickets = agentMap[agent].sort((a, b) => {
+                const tA = a.primaryDatePHT ? a.primaryDatePHT.getTime() : 0;
+                const tB = b.primaryDatePHT ? b.primaryDatePHT.getTime() : 0;
+                if (tA !== tB) return tA - tB;
+
+                const uA = a.secondaryDatePHT ? a.secondaryDatePHT.getTime() : 0;
+                const uB = b.secondaryDatePHT ? b.secondaryDatePHT.getTime() : 0;
+                return uA - uB;
+            });
+
+            // LAYER 1: BRAND-ISOLATED ACCURATE CALL SESSIONING
+            const brandSessions = [];
+            const usedIds = new Set();
+
+            let idx = 0;
+            while (idx < agentTickets.length) {
+                if (usedIds.has(agentTickets[idx].id)) {
+                    idx++;
+                    continue;
+                }
+
+                const startTicket = agentTickets[idx];
+                const currentBrand = startTicket.storeBrand;
+                const sessionTickets = [startTicket];
+                usedIds.add(startTicket.id);
+
+                const getSessionMaxOrders = (tickets) => {
+                    let maxO = 0;
+                    tickets.forEach(t => {
+                        const parsed = parseInt(t.ordersStr, 10);
+                        if (!isNaN(parsed) && parsed > maxO) maxO = parsed;
+                    });
+                    return maxO;
+                };
+
+                let j = idx + 1;
+                while (j < agentTickets.length) {
+                    const nextTicket = agentTickets[j];
+                    if (usedIds.has(nextTicket.id)) {
+                        j++;
+                        continue;
+                    }
+
+                    const prevTime = sessionTickets[sessionTickets.length - 1].primaryDatePHT ? sessionTickets[sessionTickets.length - 1].primaryDatePHT.getTime() : 0;
+                    const nextTime = nextTicket.primaryDatePHT ? nextTicket.primaryDatePHT.getTime() : 0;
+                    const gapMinutes = Math.abs(nextTime - prevTime) / (1000 * 60);
+
+                    // Break session if idle timeout (> 15 mins) or brand changes
+                    if (gapMinutes > 15 || nextTicket.storeBrand !== currentBrand) {
+                        break;
+                    }
+
+                    const currentTargetOrders = getSessionMaxOrders(sessionTickets);
+                    
+                    // Stop if target size has already been reached
+                    if (currentTargetOrders > 0 && sessionTickets.length >= currentTargetOrders) {
+                        break;
+                    }
+
+                    // Guard: If next ticket explicitly starts a different multi-order batch count, break
+                    const startDeclared = parseInt(startTicket.ordersStr, 10);
+                    const nextDeclared = parseInt(nextTicket.ordersStr, 10);
+                    if (!isNaN(nextDeclared) && nextDeclared > 1 && !isNaN(startDeclared) && startDeclared > 1 && nextDeclared !== startDeclared) {
+                        break;
+                    }
+
+                    sessionTickets.push(nextTicket);
+                    usedIds.add(nextTicket.id);
+                    j++;
+                }
+
+                brandSessions.push({ tickets: sessionTickets, brand: currentBrand });
+                idx++;
+            }
+
+            // Sort brand sessions chronologically by start timestamp
+            brandSessions.sort((a, b) => a.tickets[0].primaryDatePHT - b.tickets[0].primaryDatePHT);
+
+            // LAYER 2: CROSS-BRAND QUOTA STUFFING FRAUD DETECTION
+            const layer2UsedIds = new Set();
+            const finalCallGroups = [];
+
+            brandSessions.forEach(session => {
+                const sTickets = session.tickets.filter(t => !layer2UsedIds.has(t.id));
+                if (sTickets.length === 0) return;
+
+                const sBrand = session.brand;
+                const mothers = sTickets.filter(t => !isNaN(parseInt(t.ordersStr, 10)) && parseInt(t.ordersStr, 10) > 0);
+
+                if (mothers.length > 0) {
+                    const mTicket = mothers[0];
+                    const declaredOrders = parseInt(mTicket.ordersStr, 10);
+                    const actualRows = sTickets.length;
+
+                    // If Mother Ticket claims MORE orders than physical rows of its own brand:
+                    if (actualRows < declaredOrders) {
+                        const needed = declaredOrders - actualRows;
+                        const mTime = mTicket.primaryDatePHT ? mTicket.primaryDatePHT.getTime() : 0;
+
+                        // Search for unmothered tickets from OTHER brands solved within 3 minutes
+                        const candidateBorrowed = agentTickets.filter(t => 
+                            t.storeBrand !== sBrand &&
+                            !layer2UsedIds.has(t.id) &&
+                            Math.abs((t.primaryDatePHT ? t.primaryDatePHT.getTime() : 0) - mTime) <= 180000 &&
+                            (isNaN(parseInt(t.ordersStr, 10)) || parseInt(t.ordersStr, 10) === 0)
+                        );
+
+                        if (candidateBorrowed.length > 0) {
+                            const borrowedList = candidateBorrowed.slice(0, needed);
+                            const combinedTickets = [...sTickets, ...borrowedList].sort((a, b) => a.primaryDatePHT - b.primaryDatePHT);
+
+                            borrowedList.forEach(bt => layer2UsedIds.add(bt.id));
+                            sTickets.forEach(st => layer2UsedIds.add(st.id));
+
+                            finalCallGroups.push({ tickets: combinedTickets });
+                            return;
+                        }
+                    }
+                }
+
+                sTickets.forEach(st => layer2UsedIds.add(st.id));
+                finalCallGroups.push({ tickets: sTickets });
+            });
+
+            // Sort final call groups chronologically
+            finalCallGroups.sort((a, b) => a.tickets[0].primaryDatePHT - b.tickets[0].primaryDatePHT);
+
+            const agentCard = document.createElement('div');
+            agentCard.className = 'agent-card';
+            let groupsHtml = '';
+            let totalAgentOrders = 0;
+            const totalAgentTickets = agentTickets.length;
+
+            finalCallGroups.forEach((groupData, index) => {
+                const group = groupData.tickets;
+                const startTime = group[0].primaryDatePHT;
+                const endTime = group[group.length - 1].primaryDatePHT;
+                const timeRange = `${formatTimePHT(startTime)} - ${formatTimePHT(endTime)}`;
+                const duration = calculateDuration(startTime, endTime);
+
+                let maxOrdersFound = 0;
+                const brandSet = new Set();
+                
+                group.forEach(t => {
+                    const parsedNum = parseInt(t.ordersStr, 10);
+                    if (!isNaN(parsedNum) && parsedNum > maxOrdersFound) maxOrdersFound = parsedNum;
+                    brandSet.add(t.storeBrand);
+                });
+                
+                const finalOrderCount = maxOrdersFound > 0 ? maxOrdersFound : group.length;
+                totalAgentOrders += finalOrderCount;
+
+                // 🚨 FRAUD & AUDIT LOGIC 🚨
+                const isMixedBrands = brandSet.size > 1; 
+                const isAbandoned = group.length !== finalOrderCount && maxOrdersFound > 1; 
+                
+                let callClass = '';
+                let statusBadge = '';
+                
+                let displayBrand = Array.from(brandSet).map(b => b.charAt(0).toUpperCase() + b.slice(1)).join(', ');
+                if (displayBrand.length > 35) {
+                    displayBrand = displayBrand.substring(0, 32) + '...'; 
+                }
+
+                if (isMixedBrands) {
+                    callClass = 'fraud-flag';
+                    statusBadge = `
+                        <span class="fraud-badge">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            FRAUD FLAG: Mixed Brands
+                        </span>`;
+                } else if (isAbandoned) {
+                    callClass = 'abandon-flag';
+                    statusBadge = `<span class="abandon-badge">⚠️ Abandoned / Missing Tickets</span>`;
+                }
+
+                // 🎯 STRICT SINGLE-MOTHER RESOLUTION (Exactly 1 Mother Ticket per Call)
+                let motherTicket = null;
+                const multiCandidates = group.filter(t => {
+                    const parsed = parseInt(t.ordersStr, 10);
+                    return !isNaN(parsed) && parsed > 1;
+                });
+
+                if (multiCandidates.length > 0) {
+                    // First chronological ticket that declared multi-orders anchors the call
+                    motherTicket = multiCandidates[0];
+                } else {
+                    const singleCandidates = group.filter(t => {
+                        const parsed = parseInt(t.ordersStr, 10);
+                        return !isNaN(parsed) && parsed > 0;
+                    });
+                    motherTicket = singleCandidates.length > 0 ? singleCandidates[0] : group[0];
+                }
+
+                let rowsHtml = '';
+                group.forEach(t => {
+                    const isMother = (t.id === motherTicket.id);
+                    let rowClass = '';
+                    let motherLabel = '';
+                    let orderDisplay = '-';
+
+                    if (isMother) {
+                        rowClass = 'mother-row';
+                        const declaredVal = parseInt(t.ordersStr, 10);
+                        orderDisplay = !isNaN(declaredVal) && declaredVal > 0 ? declaredVal : finalOrderCount;
+
+                        if (group.length > 1 || finalOrderCount > 1) {
+                            motherLabel = `<span class="mother-icon">★ Mother Ticket</span>`;
+                        } else {
+                            motherLabel = `<span class="single-icon">Single Ticket</span>`;
+                        }
+                    } else {
+                        rowClass = 'child-row';
+                        motherLabel = `<span class="child-icon">↳ Child Ticket</span>`;
+                        orderDisplay = `<span style="color: var(--text-muted); font-size: 0.8rem;">- (Child)</span>`;
+                    }
+
+                    const brandDisplay = isMixedBrands ? `<span class="mixed-brand-highlight">${t.storeName}</span>` : t.storeName;
+
+                    rowsHtml += `
+                        <tr class="${rowClass}">
+                            <td><strong>${t.id}</strong></td>
+                            <td>${brandDisplay} ${motherLabel}</td>
+                            <td style="${isMother ? 'font-weight: bold;' : ''}">${orderDisplay}</td>
+                            <td>${t.solvedStrRaw}</td>
+                        </tr>
+                    `;
+                });
+
+                groupsHtml += `
+                    <div class="call-group ${callClass}">
+                        <div class="call-header" onclick="this.parentElement.classList.toggle('open')">
+                            <div class="badge-container">
+                                <span class="call-title">Call ${index + 1}</span>
+                                <span class="badge">${group.length} Ticket Row${group.length > 1 ? 's' : ''}</span>
+                                <span class="order-badge">📦 ${finalOrderCount} Orders</span>
+                                <span class="brand-badge" title="${Array.from(brandSet).join(', ')}">📍 ${displayBrand}</span>
+                                <span class="duration-badge">⏱️ ${timeRange} (${duration})</span>
+                                ${statusBadge}
+                            </div>
+                            <span class="inspect-btn">▼ Inspect</span>
+                        </div>
+                        <div class="call-details">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Ticket ID (Col A)</th>
+                                        <th>Store Name (Col E)</th>
+                                        <th>Orders (Col K)</th>
+                                        <th>Solved Time (Col N)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rowsHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+
+            agentCard.innerHTML = `
+                <div class="agent-header" onclick="this.parentElement.classList.toggle('active')">
+                    <span>${agent}</span>
+                    <div class="agent-stats">
+                        <span class="stat-orders">📦 ${totalAgentOrders} Orders Disputed / 📄 ${totalAgentTickets} Tickets Assisted</span>
+                        <span class="stat-sessions">${finalCallGroups.length} Call Sessions</span>
+                    </div>
+                </div>
+                <div class="agent-body">${groupsHtml}</div>
+            `;
+            output.appendChild(agentCard);
+        });
+    });
+
+    function formatTimePHT(dateObj) {
+        if (!dateObj || isNaN(dateObj.getTime())) return 'N/A';
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    function calculateDuration(startDate, endDate) {
+        if (!startDate || !endDate) return '0m 0s';
+        const diffMs = Math.abs(endDate - startDate);
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        const diffSecs = Math.floor((diffMs % (1000 * 60)) / 1000);
+        return `${diffMins}m ${diffSecs}s`;
+    }
+</script>
+</body>
+</html>
