@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Workload & Fraud Auditor (Accurate V4)</title>
+    <title>Agent Workload & Fraud Auditor (Accurate V5)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -20,6 +20,8 @@
             --success-bg: #ecfdf5;
             --danger: #dc2626;
             --danger-bg: #fef2f2;
+            --agreement-alert: #c2410c;
+            --agreement-alert-bg: #fff7ed;
             --warning: #b45309;
             --warning-bg: #fefce8;
         }
@@ -33,7 +35,7 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        .container { max-width: 1100px; margin: 0 auto; }
+        .container { max-width: 1120px; margin: 0 auto; }
         .header-section { margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
         h1 { font-size: 1.85rem; font-weight: 700; margin: 0 0 6px 0; letter-spacing: -0.025em; }
         p.subtitle { color: var(--text-muted); margin: 0; font-size: 0.95rem; }
@@ -48,6 +50,7 @@
             transition: all 0.2s ease;
         }
         .dropzone:hover { background-color: #e2e8f0; border-color: #94a3b8; }
+        .dropzone.dragover { background-color: #dbeafe; border-color: var(--accent); }
         .dropzone p { margin: 0; font-size: 1.05rem; font-weight: 600; }
         .dropzone span { display: block; margin-top: 4px; font-size: 0.85rem; color: var(--text-muted); }
         .file-loaded-status { margin-top: 10px; font-weight: 600; color: var(--success); font-size: 0.9rem; }
@@ -126,6 +129,7 @@
             overflow: hidden;
         }
         .call-group.fraud-flag { border: 1px solid #f87171; box-shadow: 0 0 0 1px #f87171; }
+        .call-group.agreement-flag { border: 1px solid #fb923c; box-shadow: 0 0 0 1px #fb923c; }
         .call-group.incomplete-flag { border: 1px solid #fbbf24; }
         
         .call-header {
@@ -137,6 +141,7 @@
             cursor: pointer;
         }
         .call-group.fraud-flag .call-header { background-color: var(--danger-bg); }
+        .call-group.agreement-flag .call-header { background-color: var(--agreement-alert-bg); }
         .call-group.incomplete-flag .call-header { background-color: var(--warning-bg); }
         
         .badge-container { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -145,13 +150,16 @@
         .badge { background: #f1f5f9; color: #475569; font-size: 0.75rem; padding: 3px 8px; border-radius: 8px; font-weight: 600; }
         .order-badge { background: var(--success-bg); color: var(--success); font-size: 0.75rem; padding: 3px 8px; border-radius: 8px; font-weight: 700; border: 1px solid #d1fae5; }
         .store-badge { background: #f3e8ff; color: #6b21a8; font-size: 0.75rem; padding: 3px 8px; border-radius: 8px; font-weight: 600; text-transform: capitalize; }
+        .agreement-badge { background: #eff6ff; color: #1d4ed8; font-size: 0.75rem; padding: 3px 8px; border-radius: 8px; font-weight: 600; border: 1px solid #bfdbfe; }
         .duration-badge { background: #fffbeb; color: #b45309; font-size: 0.75rem; padding: 3px 8px; border-radius: 8px; font-weight: 600; }
         
         .fraud-badge { background: var(--danger); color: #ffffff; font-size: 0.72rem; padding: 3px 8px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+        .agreement-flag-badge { background: var(--agreement-alert); color: #ffffff; font-size: 0.72rem; padding: 3px 8px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
         .incomplete-badge { background: #fbbf24; color: #78350f; font-size: 0.72rem; padding: 3px 8px; border-radius: 8px; font-weight: 700; }
 
         .call-details { display: none; border-top: 1px solid var(--border); }
         .call-group.fraud-flag .call-details { border-top-color: #fca5a5; }
+        .call-group.agreement-flag .call-details { border-top-color: #fdba74; }
         .call-group.open .call-details { display: block; }
 
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
@@ -160,13 +168,16 @@
         
         .mother-row td { background-color: #f0fdf4; font-weight: 600; }
         .call-group.fraud-flag .mother-row td { background-color: #fef2f2; }
+        .call-group.agreement-flag .mother-row td { background-color: #fff7ed; }
         
         .mother-icon { font-size: 0.7rem; font-weight: 700; color: #065f46; background-color: #d1fae5; padding: 2px 6px; border-radius: 4px; margin-left: 6px; border: 1px solid #a7f3d0; }
         .call-group.fraud-flag .mother-icon { color: #991b1b; background-color: #fee2e2; border-color: #fca5a5; }
+        .call-group.agreement-flag .mother-icon { color: #9a3412; background-color: #ffedd5; border-color: #fdba74; }
         .child-icon { font-size: 0.7rem; color: #64748b; background-color: #f1f5f9; padding: 2px 6px; border-radius: 4px; margin-left: 6px; border: 1px solid #e2e8f0; }
         .single-icon { font-size: 0.7rem; color: #334155; background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
         
         .mixed-store-highlight { color: var(--danger); font-weight: 700; }
+        .mixed-agreement-highlight { color: var(--agreement-alert); font-weight: 700; }
     </style>
 </head>
 <body>
@@ -174,7 +185,7 @@
 <div class="container">
     <div class="header-section">
         <h1>Agent Workload & Fraud Auditor</h1>
-        <p class="subtitle">Multi-Order Call Sessioning with Concurrent-Batch Separation</p>
+        <p class="subtitle">Multi-Order Call Sessioning with Cross-Brand & Cross-Agreement Fraud Detection</p>
     </div>
 
     <div class="dropzone" id="dropzone">
@@ -189,7 +200,7 @@
         <div class="controls-grid">
             <div class="control-group" style="max-width: 160px;">
                 <label for="targetDayInput">Target Day</label>
-                <input type="number" id="targetDayInput" class="input-field" placeholder="e.g., 11" min="1" max="31">
+                <input type="number" id="targetDayInput" class="input-field" placeholder="e.g., 15" min="1" max="31">
             </div>
             <div class="control-group">
                 <label for="searchInput">Search Agent</label>
@@ -263,6 +274,15 @@
         return clean.replace(/-$/, '').trim().replace(/\.$/, '').trim() || "General Store";
     }
 
+    function normalizeAgreementKey(rawAgr) {
+        if (!rawAgr) return '';
+        const cleaned = String(rawAgr).trim();
+        if (cleaned === '' || cleaned === "'-" || cleaned === '-' || cleaned.toLowerCase() === 'n/a') {
+            return '';
+        }
+        return cleaned.toLowerCase();
+    }
+
     processBtn.addEventListener('click', () => {
         output.innerHTML = '';
         if (rawCsvRows.length < 2) { alert('Please load a valid CSV file first.'); return; }
@@ -295,8 +315,6 @@
 
             if (rowDay === targetDay) {
                 const solvedDateRaw = solvedStr ? new Date(solvedStr) : null;
-                const updatedDateRaw = updatedStr ? new Date(updatedStr) : null;
-
                 let solvedDateShifted = null;
                 if (solvedDateRaw && !isNaN(solvedDateRaw.getTime())) {
                     solvedDateShifted = new Date(solvedDateRaw.getTime() + (hoursToAdd * 60 * 60 * 1000));
@@ -308,6 +326,7 @@
                     storeName: storeName,
                     storeBrand: getStoreChain(storeName, agreementName),
                     agreementName: agreementName,
+                    agreementKey: normalizeAgreementKey(agreementName),
                     ordersStr: ordersStr,
                     rawDeclared: (!isNaN(parseInt(ordersStr, 10)) && parseInt(ordersStr, 10) > 0) ? parseInt(ordersStr, 10) : 0,
                     solvedStrRaw: solvedStr || updatedStr,
@@ -365,7 +384,7 @@
                         continue;
                     }
 
-                    // If ticket belongs to another merchant brand, SKIP it (do NOT abort session)
+                    // Skip tickets from other merchant chains without breaking the active batch
                     if (nextTicket.storeBrand !== currentBrand) {
                         j++;
                         continue;
@@ -375,7 +394,6 @@
                     const nextTime = nextTicket.timestamp;
                     const gapMinutes = Math.abs(nextTime - prevTime) / 60000;
 
-                    // Idle gap check between same-brand resolutions
                     if (gapMinutes > 15) break;
 
                     const currentTargetOrders = getSessionMaxOrders(sessionTickets);
@@ -383,7 +401,6 @@
                         break;
                     }
 
-                    // Break if next ticket explicitly initiates a distinct multi-order batch count
                     if (nextTicket.rawDeclared > 1 && startTicket.rawDeclared > 1 && nextTicket.rawDeclared !== startTicket.rawDeclared) {
                         break;
                     }
@@ -412,13 +429,11 @@
                 const baseBrand = session.brand;
                 let target = Math.max(0, ...avail.map(t => t.rawDeclared));
 
-                // If mother ticket claims more than physical rows of its brand:
                 if (target > 1 && avail.length < target) {
                     let needed = target - avail.length;
                     let mother = avail.find(t => t.rawDeclared > 1) || avail[0];
                     let mTime = mother.timestamp;
 
-                    // Look for child tickets from OTHER brands resolved within 10 minutes
                     let crossCandidates = agentTickets.filter(t => 
                         !l2Used.has(t.id) &&
                         !avail.some(at => at.id === t.id) &&
@@ -461,39 +476,66 @@
 
                 let maxOrdersFound = 0;
                 const brandSet = new Set();
+                const agreementKeySet = new Set();
+                const agreementDisplaySet = new Set();
                 
                 group.forEach(t => {
                     if (t.rawDeclared > maxOrdersFound) maxOrdersFound = t.rawDeclared;
                     brandSet.add(t.storeBrand);
+                    if (t.agreementKey !== '') {
+                        agreementKeySet.add(t.agreementKey);
+                        agreementDisplaySet.add(t.agreementName.trim());
+                    }
                 });
                 
                 const finalOrderCount = maxOrdersFound > 0 ? maxOrdersFound : group.length;
                 totalAgentOrders += finalOrderCount;
 
-                const isMixedStores = brandSet.size > 1; 
+                // Mother Ticket Selection
+                let motherTicket = group.find(t => t.rawDeclared > 1) || group[0];
+                const anchorBrand = motherTicket.storeBrand;
+                const firstValidAgr = group.find(t => t.agreementKey !== '');
+                const anchorAgreementKey = motherTicket.agreementKey || (firstValidAgr ? firstValidAgr.agreementKey : '');
+
+                // 🚨 FRAUD & MISMATCH CHECKS 🚨
+                const isMixedBrands = brandSet.size > 1;
+                const isMixedAgreements = agreementKeySet.size > 1;
                 const isIncomplete = (group.length < finalOrderCount && maxOrdersFound > 1); 
                 
                 let callClass = '';
-                let statusBadge = '';
+                let statusBadgesHtml = '';
                 
                 let displayBrand = Array.from(brandSet).join(', ');
                 if (displayBrand.length > 35) displayBrand = displayBrand.substring(0, 32) + '...';
 
-                if (isMixedStores) {
+                let displayAgreement = agreementDisplaySet.size > 0 
+                    ? Array.from(agreementDisplaySet)[0] 
+                    : 'N/A';
+                if (agreementDisplaySet.size > 1) {
+                    displayAgreement += ` (+${agreementDisplaySet.size - 1} more)`;
+                }
+                if (displayAgreement.length > 36) displayAgreement = displayAgreement.substring(0, 33) + '...';
+
+                if (isMixedBrands) {
                     callClass = 'fraud-flag';
-                    statusBadge = `
+                    statusBadgesHtml += `
                         <span class="fraud-badge">
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                            FRAUD FLAG: Mixed Brands
+                            FRAUD FLAG: Mixed Stores
                         </span>`;
-                } else if (isIncomplete) {
-                    callClass = 'incomplete-flag';
-                    statusBadge = `<span class="incomplete-badge">⚠️ Incomplete: ${group.length}/${finalOrderCount} Tickets Found</span>`;
+                } else if (isMixedAgreements) {
+                    callClass = 'agreement-flag';
+                    statusBadgesHtml += `
+                        <span class="agreement-flag-badge">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            FLAG: Mixed Agreements (${agreementKeySet.size})
+                        </span>`;
                 }
 
-                // Mother Ticket Selection
-                let motherTicket = group.find(t => t.rawDeclared > 1) || group[0];
-                const anchorBrand = motherTicket.storeBrand;
+                if (isIncomplete) {
+                    if (!callClass) callClass = 'incomplete-flag';
+                    statusBadgesHtml += `<span class="incomplete-badge">⚠️ Incomplete: ${group.length}/${finalOrderCount} Tickets Found</span>`;
+                }
 
                 let rowsHtml = '';
                 group.forEach(t => {
@@ -515,16 +557,21 @@
                         orderDisplay = `<span style="color: var(--text-muted); font-size: 0.8rem;">- (Child)</span>`;
                     }
 
-                    const isBrandMismatch = isMixedStores && (t.storeBrand !== anchorBrand);
+                    const isBrandMismatch = isMixedBrands && (t.storeBrand !== anchorBrand);
                     const storeDisplay = isBrandMismatch 
                         ? `<span class="mixed-store-highlight" title="Does not match call's merchant chain!">${t.storeName}</span>` 
                         : t.storeName;
+
+                    const isAgreementMismatch = isMixedAgreements && t.agreementKey !== '' && (t.agreementKey !== anchorAgreementKey);
+                    const agreementDisplay = isAgreementMismatch
+                        ? `<span class="mixed-agreement-highlight" title="Does not match Mother Ticket's Agreement Name!">${t.agreementName}</span>`
+                        : (t.agreementName || 'N/A');
 
                     rowsHtml += `
                         <tr class="${rowClass}">
                             <td><strong>${t.id}</strong></td>
                             <td>${storeDisplay} ${motherLabel}</td>
-                            <td style="color: var(--text-muted); font-size: 0.82rem;">${t.agreementName || 'N/A'}</td>
+                            <td style="font-size: 0.82rem; ${isAgreementMismatch ? '' : 'color: var(--text-muted);'}">${agreementDisplay}</td>
                             <td style="${isMother && t.rawDeclared > 0 ? 'font-weight: bold;' : ''}">${orderDisplay}</td>
                             <td>${t.solvedStrRaw}</td>
                         </tr>
@@ -539,8 +586,9 @@
                                 <span class="badge">${group.length} Ticket Row${group.length > 1 ? 's' : ''}</span>
                                 <span class="order-badge">📦 ${finalOrderCount} Orders</span>
                                 <span class="store-badge" title="${Array.from(brandSet).join(', ')}">🏪 ${displayBrand}</span>
+                                <span class="agreement-badge" title="${Array.from(agreementDisplaySet).join(', ')}">🏢 ${displayAgreement}</span>
                                 <span class="duration-badge">⏱️ ${timeRange} (${duration})</span>
-                                ${statusBadge}
+                                ${statusBadgesHtml}
                             </div>
                             <span style="font-size: 0.8rem; color: var(--accent); font-weight: 600;">▼ Inspect</span>
                         </div>
