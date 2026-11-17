@@ -342,7 +342,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title">Weekly Ticket Summary Processor (Single CSV + Date Filter + TL Ranking Sync)</div>
+    <div class="card-title">Weekly Ticket Summary Processor (Single CSV + Date Filter + LOB & TL Ranking Sync)</div>
     
     <div class="controls-wrapper">
       <div class="single-file-wrapper">
@@ -386,7 +386,99 @@
   </div>
 
 <script>
-const EXCLUDED_AGENTS = ['justine parilla'];
+// Non-agent / excluded accounts
+const EXCLUDED_AGENTS = ['justine parilla', 'ivy algoso', 'elvie estellore'];
+
+// Agent LOB Mapping (supports both Zendesk short names and full middle-name formats)
+const AGENT_LOB_MAP = {
+  // 1PD/3PD
+  "miguel angelo geolina": "1PD/3PD",
+  "lloyd propia": "1PD/3PD",
+
+  // 3PD
+  "jenschelle eslais": "3PD",
+  "aljel damalerio": "3PD",
+  "aljel lee damalerio": "3PD",
+  "irene simbajon": "3PD",
+  "irene doniza zyra mae simbajon": "3PD",
+  "kiffe belenson": "3PD",
+  "kiffe dominic belenson": "3PD",
+  "jeussane demoral": "3PD",
+  "jeussane joy demoral": "3PD",
+  "gabrielle abajero": "3PD",
+  "gabrielle louise abajero": "3PD",
+  "jeniel ople": "3PD",
+  "jeniel pearl ople": "3PD",
+  "maria sale": "3PD",
+  "maria janine camlah sale": "3PD",
+  "daniela jane sulelom": "3PD",
+  "jasmine ceballos": "3PD",
+  "daisy beronilla": "3PD",
+  "johas camello": "3PD",
+  "johas maxuel camello": "3PD",
+  "shaira castillo": "3PD",
+  "genevev bantilan": "3PD",
+  "russeljan nguho": "3PD",
+  "russel jan nguho": "3PD",
+  "renzelkenn bueno": "3PD",
+  "renzel kenn buenos": "3PD",
+  "harold makiling": "3PD",
+  "laurence james quistadio": "3PD",
+  "christian antatico": "3PD",
+  "christian ralph antatico": "3PD",
+  "john turugan": "3PD",
+  "john kenneth turugan": "3PD",
+  "ausie delima": "3PD",
+  "janevic alolor": "3PD",
+  "jane vic alolor": "3PD",
+  "marymay musa": "3PD",
+  "mary may musa": "3PD",
+  "erica goloran": "3PD",
+  "hannah mautad": "3PD",
+  "jamaica rosales": "3PD",
+  "rheamae buscano": "3PD",
+  "rhea mae buscano": "3PD",
+  "shem justiniani": "3PD",
+  "shem uzziel justiniani": "3PD",
+  "honey claire tanutan": "3PD",
+
+  // Live Remake
+  "saimor panganiban": "Live Remake",
+  "melvin de jesus": "Live Remake",
+  "chaira wata": "Live Remake",
+  "chaira mae wata": "Live Remake",
+  "donna cristobal": "Live Remake",
+  "siti quituar": "Live Remake",
+  "siti hariyadi quituar": "Live Remake",
+  "eron casuyac": "Live Remake",
+  "eron joshua casuyac": "Live Remake",
+  "hazel versuela": "Live Remake",
+  "hazel elaine versuela": "Live Remake",
+  "jovir domingo": "Live Remake",
+  "kate maglasang": "Live Remake",
+  "kate ashley maglasang": "Live Remake",
+  "mark ycong": "Live Remake",
+  "mark petersen ycong": "Live Remake",
+  "jevelyn jamero": "Live Remake",
+  "jenamie sagetarios": "Live Remake"
+};
+
+function getAgentLOB(name) {
+  if (!name) return "-";
+  const cleanName = name.toLowerCase().trim().replace(/\s+/g, ' ');
+  if (AGENT_LOB_MAP[cleanName]) {
+    return AGENT_LOB_MAP[cleanName];
+  }
+  // Fallback match using First + Last word
+  const parts = cleanName.split(' ');
+  if (parts.length >= 2) {
+    const firstLast = `${parts[0]} ${parts[parts.length - 1]}`;
+    if (AGENT_LOB_MAP[firstLast]) {
+      return AGENT_LOB_MAP[firstLast];
+    }
+  }
+  return "-";
+}
 
 let currentSummaryData = [];
 
@@ -527,7 +619,6 @@ async function processWeeklyCSV() {
   statusDiv.style.color = "var(--brand-beige)";
   statusDiv.textContent = `Processing "${file.name}" for Days ${startDay}–${endDay}...`;
 
-  // Allow UI status message to paint before heavy parsing
   await new Promise(r => setTimeout(r, 20));
 
   try {
@@ -541,6 +632,7 @@ async function processWeeklyCSV() {
 
     const rawArray = Object.keys(masterStats).map(name => {
       const s = masterStats[name];
+      const lob = getAgentLOB(name);
       
       // Excludes Expired from Total Order Disputed
       let totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated;
@@ -557,6 +649,7 @@ async function processWeeklyCSV() {
 
       return { 
         name, 
+        lob,
         ...s, 
         totalDispute, 
         winRate
@@ -626,7 +719,7 @@ function accumulateSummary(rows, stats, startDay, endDay, seenTicketIds) {
   if (dateIdx === -1) dateIdx = 13;
 
   const minCols = Math.max(assigneeIdx, statusIdx, dateIdx);
-  const isMonthRollover = startDay > endDay; // Supports ranges like 29 to 4 across month-end
+  const isMonthRollover = startDay > endDay;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -639,6 +732,7 @@ function accumulateSummary(rows, stats, startDay, endDay, seenTicketIds) {
 
     if (!assignee || assignee === '-' || assignee === "'-") continue;
 
+    // Exclude non-agents (Justine Parilla, Ivy Algoso, Elvie Estellore)
     const assigneeLower = assignee.toLowerCase();
     if (EXCLUDED_AGENTS.some(ex => assigneeLower.includes(ex))) continue;
 
@@ -707,21 +801,24 @@ function renderTable(data) {
     return;
   }
 
-  let totals = { succ: 0, den: 0, ref: 0, cool: 0, esc: 0, exp: 0, total: 0 };
-  let html = `<table id="summaryTable"><thead><tr><th class="assignee-header">Assignee</th><th>Successful</th><th>Denied</th><th>Already Refunded</th><th>Cool Off</th><th>Escalated</th><th>Expired</th><th>Total Order Disputed</th><th>Winrate</th><th>Ranking</th></tr></thead><tbody>`;
+  let totals = { succ: 0, den: 0, ref: 0, cool: 0, exp: 0, total: 0 };
+  let html = `<table id="summaryTable"><thead><tr><th class="assignee-header">Assignee</th><th>LOB</th><th>Successful</th><th>Denied</th><th>Already Refunded</th><th>Cool Off</th><th>Expired</th><th>Total Order Disputed</th><th>Winrate</th><th>Ranking</th></tr></thead><tbody>`;
 
   data.forEach(row => {
-    totals.succ += row.successful; totals.den += row.denied; totals.ref += row.refunded;
-    totals.cool += row.coolOff; totals.esc += row.escalated; totals.exp += row.expired;
+    totals.succ += row.successful;
+    totals.den += row.denied;
+    totals.ref += row.refunded;
+    totals.cool += row.coolOff;
+    totals.exp += row.expired;
     totals.total += row.totalDispute;
 
-    html += `<tr><td class="text-left">${row.name}</td><td>${row.successful}</td><td>${row.denied}</td><td>${row.refunded}</td><td>${row.coolOff}</td><td>${row.escalated}</td><td>${row.expired}</td><td>${row.totalDispute}</td><td>${row.winRate.toFixed(2)}%</td><td>${row.ranking}</td></tr>`;
+    html += `<tr><td class="text-left">${row.name}</td><td>${row.lob}</td><td>${row.successful}</td><td>${row.denied}</td><td>${row.refunded}</td><td>${row.coolOff}</td><td>${row.expired}</td><td>${row.totalDispute}</td><td>${row.winRate.toFixed(2)}%</td><td>${row.ranking}</td></tr>`;
   });
 
   const overallWinRateDenom = totals.succ + totals.den + totals.exp;
   const overallWinRate = overallWinRateDenom > 0 ? (totals.succ / overallWinRateDenom * 100).toFixed(2) : "0.00";
 
-  html += `<tr class="summary-row"><td class="text-left">Grand Total</td><td>${totals.succ}</td><td>${totals.den}</td><td>${totals.ref}</td><td>${totals.cool}</td><td>${totals.esc}</td><td>${totals.exp}</td><td>${totals.total}</td><td>${overallWinRate}%</td><td>-</td></tr></tbody></table>`;
+  html += `<tr class="summary-row"><td class="text-left">Grand Total</td><td>-</td><td>${totals.succ}</td><td>${totals.den}</td><td>${totals.ref}</td><td>${totals.cool}</td><td>${totals.exp}</td><td>${totals.total}</td><td>${overallWinRate}%</td><td>-</td></tr></tbody></table>`;
   outputDiv.innerHTML = html;
 }
 
