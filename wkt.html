@@ -122,17 +122,14 @@
       margin-bottom: 10px;
     }
 
-    .file-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 8px;
+    .single-file-wrapper {
       margin-bottom: 10px;
     }
 
     .control-group { 
       display: flex; 
       flex-direction: column; 
-      gap: 3px; 
+      gap: 4px; 
       font-size: 10px;
       color: var(--text-muted);
     }
@@ -140,14 +137,14 @@
     .file-slot-label {
       font-weight: bold;
       color: var(--brand-beige);
-      font-size: 10px;
+      font-size: 11px;
       margin-bottom: 2px;
     }
 
     .drop-zone {
       border: 1px dashed #3a3a3c;
       border-radius: 4px;
-      padding: 4px 6px;
+      padding: 10px 12px;
       text-align: center;
       background-color: #080808;
       cursor: pointer;
@@ -156,7 +153,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 38px;
+      min-height: 46px;
     }
 
     .drop-zone:hover, .drop-zone.dragover {
@@ -165,7 +162,7 @@
     }
 
     .drop-zone-text {
-      font-size: 9px;
+      font-size: 11px;
       color: var(--text-muted);
       white-space: nowrap;
       overflow: hidden;
@@ -187,7 +184,7 @@
       font-size: 11px; 
       background-color: #080808;
       color: var(--text-main);
-      width: 60px;
+      width: 65px;
       height: 32px;
       outline: none;
     }
@@ -345,63 +342,15 @@
   </div>
 
   <div class="card">
-    <div class="card-title">Weekly Ticket Summary Processor (TL Ranking Sync & Google Sheets Export)</div>
+    <div class="card-title">Weekly Ticket Summary Processor (Single CSV + Date Filter + TL Ranking Sync)</div>
     
     <div class="controls-wrapper">
-      <div class="file-grid">
+      <div class="single-file-wrapper">
         <div class="control-group">
-          <span class="file-slot-label">File 1 (Sun / Day 1)</span>
-          <div class="drop-zone" id="dropZone1">
-            <div class="drop-zone-text" id="dropZoneText1">Drop CSV 1 or <span>browse</span></div>
-            <input type="file" class="csv-input" id="csvFile1" accept=".csv">
-          </div>
-        </div>
-
-        <div class="control-group">
-          <span class="file-slot-label">File 2 (Mon / Day 2)</span>
-          <div class="drop-zone" id="dropZone2">
-            <div class="drop-zone-text" id="dropZoneText2">Drop CSV 2 or <span>browse</span></div>
-            <input type="file" class="csv-input" id="csvFile2" accept=".csv">
-          </div>
-        </div>
-
-        <div class="control-group">
-          <span class="file-slot-label">File 3 (Tue / Day 3)</span>
-          <div class="drop-zone" id="dropZone3">
-            <div class="drop-zone-text" id="dropZoneText3">Drop CSV 3 or <span>browse</span></div>
-            <input type="file" class="csv-input" id="csvFile3" accept=".csv">
-          </div>
-        </div>
-
-        <div class="control-group">
-          <span class="file-slot-label">File 4 (Wed / Day 4)</span>
-          <div class="drop-zone" id="dropZone4">
-            <div class="drop-zone-text" id="dropZoneText4">Drop CSV 4 or <span>browse</span></div>
-            <input type="file" class="csv-input" id="csvFile4" accept=".csv">
-          </div>
-        </div>
-
-        <div class="control-group">
-          <span class="file-slot-label">File 5 (Thu / Day 5)</span>
-          <div class="drop-zone" id="dropZone5">
-            <div class="drop-zone-text" id="dropZoneText5">Drop CSV 5 or <span>browse</span></div>
-            <input type="file" class="csv-input" id="csvFile5" accept=".csv">
-          </div>
-        </div>
-
-        <div class="control-group">
-          <span class="file-slot-label">File 6 (Fri / Day 6)</span>
-          <div class="drop-zone" id="dropZone6">
-            <div class="drop-zone-text" id="dropZoneText6">Drop CSV 6 or <span>browse</span></div>
-            <input type="file" class="csv-input" id="csvFile6" accept=".csv">
-          </div>
-        </div>
-
-        <div class="control-group">
-          <span class="file-slot-label">File 7 (Sat / Day 7)</span>
-          <div class="drop-zone" id="dropZone7">
-            <div class="drop-zone-text" id="dropZoneText7">Drop CSV 7 or <span>browse</span></div>
-            <input type="file" class="csv-input" id="csvFile7" accept=".csv">
+          <span class="file-slot-label">Weekly Production CSV File</span>
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-text" id="dropZoneText">📂 Drop Weekly CSV file here or <span>browse</span></div>
+            <input type="file" id="csvFile" accept=".csv">
           </div>
         </div>
       </div>
@@ -409,18 +358,18 @@
       <div class="date-filter-container">
         <div class="date-input-group">
           <label><b>Start Day (PHT):</b></label>
-          <input type="number" id="startDay" value="1" min="1" max="31">
+          <input type="number" id="startDay" value="10" min="1" max="31">
         </div>
         <div class="date-input-group">
           <label><b>End Day (PHT):</b></label>
-          <input type="number" id="endDay" value="7" min="1" max="31">
+          <input type="number" id="endDay" value="17" min="1" max="31">
         </div>
-        <span style="font-size: 10px; color: var(--text-muted);">(Captures data between Start and End day numbers)</span>
+        <span style="font-size: 10px; color: var(--text-muted);">(Captures tickets solved between Start and End day numbers)</span>
       </div>
 
       <div class="action-bar">
         <button onclick="processWeeklyCSV()">Process Weekly Report</button>
-        <button class="btn-clear" onclick="clearAllFiles()">Reset Files</button>
+        <button class="btn-clear" onclick="clearFile()">Reset File</button>
         <button class="btn-copy" id="copyBtn" onclick="copyTableToClipboard()">📋 Copy Image</button>
         <button class="btn-sheets" id="copySheetsBtn" onclick="copyToSheets()">📊 Copy to Sheets</button>
       </div>
@@ -428,7 +377,7 @@
 
     <div id="status"></div>
     <div class="table-container" id="output">
-      <p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload 1 to 7 daily production CSV files above and specify the day range to consolidate team productivity.</p>
+      <p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload your weekly production CSV file above and specify the target Start and End day numbers to generate team productivity.</p>
     </div>
   </div>
 
@@ -439,10 +388,8 @@
 <script>
 const EXCLUDED_AGENTS = ['justine parilla'];
 
-// Global variable to hold processed summary data for the Google Sheets export
 let currentSummaryData = [];
 
-// Desired Agent Target Order for Google Sheets Export
 const CUSTOM_AGENT_ORDER = [
   "Maria Sale", "Jenschelle Eslais", "Lloyd Propia", "Honey Claire Tanutan",
   "Genevev Bantilan", "Jeniel Ople", "Miguel Angelo Geolina", "Daniela Jane Sulelom",
@@ -454,18 +401,19 @@ const CUSTOM_AGENT_ORDER = [
   "Johas Camello", "Daisy Beronilla", "Gabrielle Abajero"
 ];
 
+// Fast RFC 4180 Compliant CSV Parser
 function parseCSV(text) {
   const rows = [];
   let currentRow = [];
   let currentVal = '';
   let insideQuotes = false;
+  const len = text.length;
 
-  for (let i = 0; i < text.length; i++) {
+  for (let i = 0; i < len; i++) {
     const char = text[i];
-    const nextChar = text[i + 1];
 
     if (char === '"') {
-      if (insideQuotes && nextChar === '"') {
+      if (insideQuotes && text[i + 1] === '"') {
         currentVal += '"';
         i++;
       } else {
@@ -475,7 +423,7 @@ function parseCSV(text) {
       currentRow.push(currentVal.trim());
       currentVal = '';
     } else if ((char === '\r' || char === '\n') && !insideQuotes) {
-      if (char === '\r' && nextChar === '\n') {
+      if (char === '\r' && text[i + 1] === '\n') {
         i++;
       }
       currentRow.push(currentVal.trim());
@@ -502,66 +450,59 @@ function cleanStr(val) {
   return val.toString().replace(/^['"\s\ufeff]+|['"\s]+\$/g, '').trim();
 }
 
-for (let i = 1; i <= 7; i++) {
-  const dropZone = document.getElementById(`dropZone${i}`);
-  const csvFileInput = document.getElementById(`csvFile${i}`);
-  const dropZoneText = document.getElementById(`dropZoneText${i}`);
+// Setup Single File Drop Zone
+const dropZone = document.getElementById('dropZone');
+const csvFileInput = document.getElementById('csvFile');
+const dropZoneText = document.getElementById('dropZoneText');
 
-  dropZone.addEventListener('click', () => csvFileInput.click());
+dropZone.addEventListener('click', () => csvFileInput.click());
 
-  csvFileInput.addEventListener('change', () => {
-    if (csvFileInput.files.length) {
-      dropZoneText.innerHTML = `Loaded: <span>${csvFileInput.files[0].name}</span>`;
-    }
-  });
-
-  ['dragenter', 'dragover'].forEach(eventName => {
-    dropZone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropZone.classList.add('dragover');
-    }, false);
-  });
-
-  ['dragleave', 'drop'].forEach(eventName => {
-    dropZone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropZone.classList.remove('dragover');
-    }, false);
-  });
-
-  dropZone.addEventListener('drop', (e) => {
-    const dt = e.dataTransfer;
-    const files = dt.files;
-
-    if (files.length) {
-      if (files[0].name.endsWith('.csv')) {
-        csvFileInput.files = files;
-        dropZoneText.innerHTML = `Loaded: <span>${files[0].name}</span>`;
-      } else {
-        alert("Please drop a valid .csv file!");
-      }
-    }
-  });
-}
-
-function clearAllFiles() {
-  for (let i = 1; i <= 7; i++) {
-    const fileInput = document.getElementById(`csvFile${i}`);
-    const dropZoneText = document.getElementById(`dropZoneText${i}`);
-    fileInput.value = "";
-    dropZoneText.innerHTML = `Drop CSV ${i} or <span>browse</span>`;
+csvFileInput.addEventListener('change', () => {
+  if (csvFileInput.files.length) {
+    dropZoneText.innerHTML = `Loaded: <span>${csvFileInput.files[0].name}</span>`;
   }
+});
+
+['dragenter', 'dragover'].forEach(eventName => {
+  dropZone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.classList.add('dragover');
+  }, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+  dropZone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.classList.remove('dragover');
+  }, false);
+});
+
+dropZone.addEventListener('drop', (e) => {
+  const files = e.dataTransfer.files;
+  if (files.length) {
+    if (files[0].name.toLowerCase().endsWith('.csv')) {
+      csvFileInput.files = files;
+      dropZoneText.innerHTML = `Loaded: <span>${files[0].name}</span>`;
+    } else {
+      alert("Please drop a valid .csv file!");
+    }
+  }
+});
+
+function clearFile() {
+  csvFileInput.value = "";
+  dropZoneText.innerHTML = `📂 Drop Weekly CSV file here or <span>browse</span>`;
   document.getElementById('status').textContent = "";
-  document.getElementById('output').innerHTML = `<p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload 1 to 7 daily production CSV files above and specify the day range to consolidate team productivity.</p>`;
+  document.getElementById('output').innerHTML = `<p style="font-size: 11px; color: var(--text-muted); background: var(--card-bg); padding: 5px;">Upload your weekly production CSV file above and specify the target Start and End day numbers to generate team productivity.</p>`;
   currentSummaryData = [];
 }
 
 function readFileAsync(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => resolve({ fileName: file.name, text: e.target.result });
+    reader.onload = (e) => resolve(e.target.result);
     reader.onerror = (err) => reject(err);
     reader.readAsText(file);
   });
@@ -572,47 +513,36 @@ async function processWeeklyCSV() {
   const startDay = parseInt(document.getElementById('startDay').value, 10);
   const endDay = parseInt(document.getElementById('endDay').value, 10);
 
-  if (isNaN(startDay) || isNaN(endDay)) {
-    alert("Please enter valid Start Day and End Day numbers!");
+  if (isNaN(startDay) || isNaN(endDay) || startDay < 1 || startDay > 31 || endDay < 1 || endDay > 31) {
+    alert("Please enter valid Start Day and End Day numbers (1–31)!");
     return;
   }
 
-  if (startDay > endDay) {
-    alert("Start Day cannot be greater than End Day!");
+  if (!csvFileInput.files.length) {
+    alert("Please select or drop your weekly CSV file first!");
     return;
   }
 
-  const filesToProcess = [];
-  for (let i = 1; i <= 7; i++) {
-    const fileInput = document.getElementById(`csvFile${i}`);
-    if (fileInput.files.length > 0) {
-      filesToProcess.push(fileInput.files[0]);
-    }
-  }
-
-  if (filesToProcess.length === 0) {
-    alert("Please select or drop at least one CSV file!");
-    return;
-  }
-
+  const file = csvFileInput.files[0];
   statusDiv.style.color = "var(--brand-beige)";
-  statusDiv.textContent = `Processing ${filesToProcess.length} CSV file(s) for Day ${startDay} to Day ${endDay}...`;
+  statusDiv.textContent = `Processing "${file.name}" for Days ${startDay}–${endDay}...`;
+
+  // Allow UI status message to paint before heavy parsing
+  await new Promise(r => setTimeout(r, 20));
 
   try {
-    const readPromises = filesToProcess.map(file => readFileAsync(file));
-    const fileResults = await Promise.all(readPromises);
+    const text = await readFileAsync(file);
+    const rows = parseCSV(text);
 
     const masterStats = {};
-    const seenTicketIds = new Set(); 
+    const seenTicketIds = new Set();
 
-    fileResults.forEach(res => {
-      const rows = parseCSV(res.text);
-      accumulateSummary(rows, masterStats, startDay, endDay, seenTicketIds);
-    });
+    accumulateSummary(rows, masterStats, startDay, endDay, seenTicketIds);
 
     const rawArray = Object.keys(masterStats).map(name => {
       const s = masterStats[name];
       
+      // Excludes Expired from Total Order Disputed
       let totalDispute = s.successful + s.denied + s.refunded + s.coolOff + s.escalated;
 
       // Automatically add +200 for Lloyd Propia and Miguel Angelo Geolina
@@ -664,16 +594,15 @@ async function processWeeklyCSV() {
     nonQualified.sort((a, b) => b.totalDispute - a.totalDispute);
     const summaryArray = [...qualified, ...nonQualified];
 
-    // SAVE GLOBALLY FOR SHEETS EXPORT
     currentSummaryData = summaryArray;
 
     statusDiv.style.color = "#22c55e";
-    statusDiv.textContent = `✅ Successfully aggregated weekly data.`;
+    statusDiv.textContent = `✅ Successfully processed "${file.name}" for Days ${startDay}–${endDay} (${seenTicketIds.size.toLocaleString()} unique tickets captured).`;
     renderTable(summaryArray);
 
   } catch(err) {
     statusDiv.style.color = "#ef4444";
-    statusDiv.textContent = "❌ Error processing CSV files: " + err.message;
+    statusDiv.textContent = "❌ Error processing CSV file: " + err.message;
     console.error(err);
   }
 }
@@ -696,9 +625,12 @@ function accumulateSummary(rows, stats, startDay, endDay, seenTicketIds) {
   if (statusIdx === -1) statusIdx = 1;
   if (dateIdx === -1) dateIdx = 13;
 
+  const minCols = Math.max(assigneeIdx, statusIdx, dateIdx);
+  const isMonthRollover = startDay > endDay; // Supports ranges like 29 to 4 across month-end
+
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    if (!row || row.length <= Math.max(assigneeIdx, statusIdx, dateIdx)) continue;
+    if (!row || row.length <= minCols) continue;
 
     const ticketId = cleanStr(row[idIdx]);
     const assignee = cleanStr(row[assigneeIdx]);
@@ -710,6 +642,7 @@ function accumulateSummary(rows, stats, startDay, endDay, seenTicketIds) {
     const assigneeLower = assignee.toLowerCase();
     if (EXCLUDED_AGENTS.some(ex => assigneeLower.includes(ex))) continue;
 
+    // Extract day number from Solved date string
     let rowDay = null;
     if (updatedStr) {
       const matchIso = updatedStr.match(/\d{4}-\d{2}-(\d{2})/);
@@ -728,10 +661,15 @@ function accumulateSummary(rows, stats, startDay, endDay, seenTicketIds) {
       }
     }
 
-    if (rowDay !== null) {
+    if (rowDay === null) continue;
+
+    if (!isMonthRollover) {
       if (rowDay < startDay || rowDay > endDay) continue;
+    } else {
+      if (rowDay < startDay && rowDay > endDay) continue;
     }
 
+    // Deduplicate by Zendesk Ticket ID
     if (ticketId && ticketId !== '-' && ticketId !== "'-") {
       const uniqueKey = ticketId.toLowerCase();
       if (seenTicketIds.has(uniqueKey)) {
@@ -765,7 +703,7 @@ function accumulateSummary(rows, stats, startDay, endDay, seenTicketIds) {
 function renderTable(data) {
   const outputDiv = document.getElementById('output');
   if (!data || data.length === 0) {
-    outputDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold; font-size: 11px; background: var(--card-bg); padding: 5px;">No records found matching the specified date range criteria across the uploaded files.</p>`;
+    outputDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold; font-size: 11px; background: var(--card-bg); padding: 5px;">No records found matching the specified date range criteria in the uploaded file.</p>`;
     return;
   }
 
@@ -793,7 +731,7 @@ async function copyTableToClipboard() {
   const btn = document.getElementById('copyBtn');
 
   if (!table) {
-    alert("Please process weekly CSV files first to generate the table!");
+    alert("Please process a weekly CSV file first to generate the table!");
     return;
   }
 
@@ -836,22 +774,18 @@ async function copyTableToClipboard() {
 function copyToSheets() {
   const btn = document.getElementById('copySheetsBtn');
   if (!currentSummaryData || currentSummaryData.length === 0) {
-    alert("No data to copy! Please process the CSV files first.");
+    alert("No data to copy! Please process the CSV file first.");
     return;
   }
 
   let lines = [];
   
-  // Sort and match against custom order array
   CUSTOM_AGENT_ORDER.forEach(targetName => {
-    // Find agent in current processed data (case insensitive matching)
     let agentRecord = currentSummaryData.find(a => a.name.toLowerCase().trim() === targetName.toLowerCase().trim());
     
     if (agentRecord) {
-      // Create a tab-separated string (Agent Name \t Total Order Disputed)
       lines.push(`${agentRecord.name}\t${agentRecord.totalDispute}`);
     } else {
-      // If agent isn't found in current data, still output them with 0 to keep row integrity
       lines.push(`${targetName}\t0`);
     }
   });
