@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Tickets - Agents</title>
+    
+    <!-- OT Favicon Icon for Browser Tab -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23000000'/><text x='50%' y='65%' font-family='sans-serif' font-weight='900' font-size='52' fill='%23ffffff' text-anchor='middle'>OT</text></svg>">
+
+    <!-- PAPAPARSE & HTML2CANVAS LIBRARIES -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: Arial, -apple-system, BlinkMacSystemFont, sans-serif; 
+            padding: 10px; 
+            background-color: #000000; 
+            color: #ededed; 
+            margin: 0;
+            font-size: 14px;
+        }
+        .container { 
+            width: 100%; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: #0a0a0a; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 1px solid #1c1c1e;
+        }
+        h1 { 
+            margin: 0 0 10px 0; 
+            color: #ffffff; 
+            font-size: 1.2rem; 
+            font-weight: 700; 
+        }
+        h2.table-title {
+            margin: 20px 0 12px 0;
+            color: #0a84ff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        h2.table-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 12px;
+            background-color: #0a84ff;
+            border-radius: 2px;
+        }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+            gap: 8px; 
+            margin-bottom: 10px; 
+        }
+        .form-group { display: flex; flex-direction: column; }
+        label { 
+            font-weight: 600; 
+            margin-bottom: 4px; 
+            font-size: 0.75em; 
+            text-transform: uppercase; 
+            color: #8e8e93; 
+        }
+
+        .drop-zone {
+            border: 1px dashed #3a3a3c;
+            border-radius: 4px;
+            padding: 6px;
+            text-align: center;
+            background-color: #121212;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #0a84ff;
+            background-color: #1a1a1e;
+        }
+        .drop-zone-text {
+            font-size: 0.8em;
+            color: #8e8e93;
+            pointer-events: none;
+        }
+        .drop-zone-text span { color: #ffffff; font-weight: 600; }
+        input[type="file"] { display: none; }
+
+        input[type="number"] { 
+            padding: 6px 8px; 
+            background-color: #121212;
+            border: 1px solid #2c2c2e; 
+            border-radius: 4px; 
+            color: #ffffff;
+            font-size: 0.85em;
+            outline: none;
+            height: 38px;
+        }
+        
+        .actions { margin-top: 8px; margin-bottom: 10px; }
+        button { 
+            background-color: #ffffff; 
+            color: #000000; 
+            border: none; 
+            padding: 6px 14px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: 700; 
+            font-size: 0.85em;
+        }
+
+        /* FILTER & VIEW TOGGLE BUTTONS */
+        .filter-container {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn-filter, .btn-view {
+            background-color: #1c1c1e;
+            color: #8e8e93;
+            border: 1px solid #2c2c2e;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.8em;
+            transition: all 0.2s ease;
+        }
+        .btn-filter:hover, .btn-view:hover {
+            background-color: #2c2c2e;
+            color: #ffffff;
+        }
+        .btn-filter.active, .btn-view.active {
+            background-color: #0a84ff;
+            color: #ffffff;
+            border-color: #0a84ff;
+        }
+
+        .view-switcher-group {
+            margin-left: auto;
+            display: flex;
+            gap: 4px;
+            background-color: #121212;
+            padding: 3px;
+            border-radius: 6px;
+            border: 1px solid #222222;
+        }
+
+        .top-action-bar {
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-export {
+            background-color: #30d158;
+            color: #000000;
+            font-size: 0.8em;
+            padding: 6px 12px;
+            font-weight: 700;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-copy-img-main {
+            background-color: #0a84ff;
+            color: #ffffff;
+            font-size: 0.8em;
+            padding: 6px 12px;
+            font-weight: 700;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-copy-img-main:hover { opacity: 0.85; }
+
+        /* REMOVE & RESTORE BUTTON STYLES */
+        .btn-remove-agent {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 6px;
+            transition: all 0.2s ease;
+            line-height: 1;
+        }
+        .btn-remove-agent:hover {
+            background-color: #dc2626;
+            color: #ffffff;
+            border-color: #dc2626;
+        }
+
+        .btn-card-remove {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-card-remove:hover {
+            background-color: #dc2626;
+            color: #ffffff;
+            border-color: #dc2626;
+        }
+
+        .btn-reset-agents {
+            background-color: #f97316;
+            color: #ffffff;
+            font-size: 0.8em;
+            padding: 6px 12px;
+            font-weight: 700;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-reset-agents:hover { opacity: 0.85; }
+
+        /* SPREADSHEET TABLE STYLE - FIXED SINGLE 1PX BORDER FOR SCREENSHOT CANVAS */
+        table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0;
+            margin-top: 5px; 
+            margin-bottom: 15px;
+            background-color: #ffffff;
+            border-top: 1px solid #c0c7d0;
+            border-left: 1px solid #c0c7d0;
+            color: #000000;
+        }
+        th, td { 
+            border-right: 1px solid #c0c7d0; 
+            border-bottom: 1px solid #c0c7d0; 
+            padding: 6px 10px; 
+            text-align: center; 
+            font-size: 13px; 
+            line-height: 1.25;
+        }
+        th { 
+            background-color: #7288a3 !important; 
+            font-weight: 700; 
+            color: #ffffff !important;
+            font-size: 12px;
+            letter-spacing: 0.3px;
+            padding: 7px 10px;
+            border-right: 1px solid #5f748e;
+            border-bottom: 1px solid #5f748e;
+        }
+        
+        /* High Contrast Agent Name Column - REGULAR FONT WEIGHT */
+        td.text-left, th.text-left { text-align: left; }
+        td.text-left {
+            font-weight: 400 !important;
+            color: #1f2937;
+            background-color: #e9f0f6;
+        }
+
+        tr:nth-child(even) td:not(.text-left) { background-color: #f8fafc; }
+        tr:nth-child(odd) td:not(.text-left) { background-color: #ffffff; }
+        
+        td:nth-child(n+2) {
+            font-variant-numeric: tabular-nums;
+            font-size: 13px;
+            color: #111827;
+        }
+
+        /* CARD VIEW LAYOUT STYLING */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .agent-card {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            color: #000000;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #7288a3;
+            background-color: #d2dee9;
+            margin: -12px -12px 0 -12px;
+            padding: 8px 12px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+        }
+
+        .agent-name {
+            font-weight: 400;
+            color: #0f172a;
+            font-size: 0.95rem;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .stat-item {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 6px 8px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f172a;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
+            padding-top: 8px;
+            border-top: 1px dashed #cbd5e1;
+        }
+
+        .btn-card-copy {
+            background-color: #1e293b;
+            color: #ffffff;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-card-copy:hover {
+            background-color: #0a84ff;
+        }
+
+        /* Compact SLA Badge Styling */
+        .sla-badge {
+            background-color: #e6f4ea;
+            color: #137333;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 12px;
+            display: inline-block;
+            border: 1px solid #ceead6;
+        }
+        .sla-badge.urgent {
+            background-color: #fce8e6;
+            color: #c5221f;
+            border: 1px solid #fad2cf;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AGENTS OPEN TICKETS</h1>
+    
+    <div class="grid">
+        <div class="form-group">
+            <label>1. Open Tickets CSV</label>
+            <div class="drop-zone" id="dropZoneOpen">
+                <div class="drop-zone-text" id="labelOpen">Drag & drop CSV or <span>browse</span></div>
+                <input type="file" id="openFile" accept=".csv">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>2. Cool Off CSV</label>
+            <div class="drop-zone" id="dropZoneCooloff">
+                <div class="drop-zone-text" id="labelCooloff">Drag & drop CSV or <span>browse</span></div>
+                <input type="file" id="cooloffFile" accept=".csv">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>3. Disputed CSV</label>
+            <div class="drop-zone" id="dropZoneDisputed">
+                <div class="drop-zone-text" id="labelDisputed">Drag & drop CSV or <span>browse</span></div>
+                <input type="file" id="disputedFile" accept=".csv">
+            </div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="form-group">
+            <label for="filterDay">Filter Day of Month (Target Day)</label>
+            <input type="number" id="filterDay" min="1" max="31" value="" placeholder="e.g. 17">
+        </div>
+        <div class="form-group">
+            <label for="targetQuota">Target Quota</label>
+            <input type="number" id="targetQuota" value="300">
+        </div>
+    </div>
+
+    <div class="actions">
+        <button onclick="processCSVs()">Process Data</button>
+    </div>
+
+    <div id="output"></div>
+</div>
+
+<script>
+let lastResults = []; 
+let currentScheduleFilter = 'all';
+let currentViewMode = 'list'; // Default View: 'list' or 'card'
+let excludedCSR1Agents = new Set(); // Stores absent/on-leave CSR 1 agents
+
+const ROSTER = [
+    "Kate Maglasang",
+    "Hazel Versuela",
+    "Eron Casuyac",
+    "Jasmine Ceballos",
+    "Melvin De Jesus",
+    "Donna Cristobal",
+    "Jenschelle Eslais",
+    "Chaira Wata",
+    "Maria Sale",
+    "Daniela Jane Sulelom",
+    "Daisy Beronilla",
+    "Johas Camello",
+    "Lloyd Propia",
+    "Mark Ycong",
+    "Miguel Angelo Geolina",
+    "Saimor Panganiban",
+    "Jeniel Ople",
+    "Siti Quituar",
+    "Jovir Domingo",
+    "Honey Claire Tanutan",
+    "Jenamie Sagetarios",
+    "Irene Simbajon",
+    "Aljel Damalerio",
+    "Jevelyn Jamero",
+    "Justine Parilla",
+    "Elvie Estellore",
+    "Ivy Algoso",
+    "Kiffe Belenson",
+    "Shem Justiniani",
+    "Jeussane Demoral",
+    "Gabrielle Abajero",
+    "Genevev Bantilan",
+    "Russeljan Nguho",
+    "Shaira Castillo",
+    "Harold Makiling",
+    "Renzelkenn Bueno",
+    "Laurence James Quistadio",
+    "John Turugan",
+    "Marymay Musa",
+    "Erica Goloran",
+    "Ausie Delima",
+    "Christian Antatico",
+    "Janevic Alolor",
+    "Rheamae Buscano",
+    "Jamaica Rosales",
+    "Hannah Mautad"
+];
+
+const SECONDARY_AGENTS = [
+    "Justine Parilla", 
+    "Ivy Algoso",
+    "Elvie Estellore"
+];
+
+// Live Agents Grouping
+const LIVE_AGENTS = [
+    "Chaira Wata",
+    "Donna Cristobal",
+    "Eron Casuyac",
+    "Hazel Versuela",
+    "Jovir Domingo",
+    "Jenamie Sagetarios",
+    "Jevelyn Jamero",
+    "Kate Maglasang",
+    "Mark Ycong",
+    "Siti Quituar",
+    "Melvin De Jesus",
+    "Saimor Panganiban"
+];
+
+// My Agents Ordering
+const MY_AGENTS = [
+    "Kate Maglasang",
+    "Melvin De Jesus",
+    "Johas Camello",
+    "Jasmine Ceballos",
+    "Aljel Damalerio",
+    "Kiffe Belenson",
+    "Shem Justiniani",
+    "Saimor Panganiban",
+    "Jenschelle Eslais",
+    "Jenamie Sagetarios",
+    "Genevev Bantilan",
+    "Shaira Castillo",
+    "Ausie Delima"
+];
+
+// Fri - Sat Specific Ordering
+const FRI_SAT_AGENTS = [
+    "Hazel Versuela",
+    "Donna Cristobal",
+    "Saimor Panganiban",
+    "Aljel Damalerio",
+    "Jenschelle Eslais",
+    "Kate Maglasang",
+    "Jevelyn Jamero",
+    "Irene Simbajon",
+    "Jovir Domingo",
+    "Mark Ycong",
+    "Siti Quituar",
+    "Eron Casuyac",
+    "Kiffe Belenson",
+    "Jeussane Demoral",
+    "Gabrielle Abajero",
+    "Genevev Bantilan",
+    "Russeljan Nguho",
+    "Marymay Musa",
+    "Christian Antatico",
+    "Janevic Alolor",
+    "Hannah Mautad"
+];
+
+// Sun - Mon Specific Ordering
+const SUN_MON_AGENTS = [
+    "Maria Sale",
+    "Melvin De Jesus",
+    "Daisy Beronilla",
+    "Chaira Wata",
+    "Lloyd Propia",
+    "Miguel Angelo Geolina",
+    "Jasmine Ceballos",
+    "Jeniel Ople",
+    "Johas Camello",
+    "Honey Claire Tanutan",
+    "Jenamie Sagetarios",
+    "Daniela Jane Sulelom",
+    "Shem Justiniani",
+    "Shaira Castillo",
+    "Harold Makiling",
+    "Renzelkenn Bueno",
+    "Laurence James Quistadio",
+    "John Turugan",
+    "Erica Goloran",
+    "Ausie Delima",
+    "Rheamae Buscano",
+    "Jamaica Rosales"
+];
+
+// Master CSR 1 Default Order (Excluding Live Agents and Secondary Agents)
+const ALL_CSR1_ORDER = [
+    "Jasmine Ceballos",
+    "Jenschelle Eslais",
+    "Maria Sale",
+    "Daniela Jane Sulelom",
+    "Daisy Beronilla",
+    "Johas Camello",
+    "Lloyd Propia",
+    "Miguel Angelo Geolina",
+    "Jeniel Ople",
+    "Honey Claire Tanutan",
+    "Irene Simbajon",
+    "Aljel Damalerio",
+    "Kiffe Belenson",
+    "Shem Justiniani",
+    "Jeussane Demoral",
+    "Gabrielle Abajero",
+    "Genevev Bantilan",
+    "Russeljan Nguho",
+    "Shaira Castillo",
+    "Harold Makiling",
+    "Renzelkenn Bueno",
+    "Laurence James Quistadio",
+    "John Turugan",
+    "Marymay Musa",
+    "Erica Goloran",
+    "Ausie Delima",
+    "Christian Antatico",
+    "Janevic Alolor",
+    "Rheamae Buscano",
+    "Jamaica Rosales",
+    "Hannah Mautad"
+];
+
+const EXCLUDED = []; 
+
+function removeCSR1Agent(agentName) {
+    excludedCSR1Agents.add(agentName);
+    if (lastResults.length > 0) {
+        renderViews(lastResults);
+    }
+}
+
+function restoreAllCSR1Agents() {
+    excludedCSR1Agents.clear();
+    if (lastResults.length > 0) {
+        renderViews(lastResults);
+    }
+}
+
+function setupDropZone(zoneId, inputId, labelId) {
+    const dropZone = document.getElementById(zoneId);
+    const input = document.getElementById(inputId);
+    const label = document.getElementById(labelId);
+
+    dropZone.addEventListener('click', () => input.click());
+
+    input.addEventListener('change', () => {
+        if (input.files.length) {
+            label.innerHTML = "Loaded: <span>" + input.files[0].name + "</span>";
+        }
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        if (files.length) {
+            if (files[0].name.endsWith('.csv')) {
+                input.files = files;
+                label.innerHTML = "Loaded: <span>" + files[0].name + "</span>";
+            } else {
+                alert("Please drop a valid .csv file!");
+            }
+        }
+    });
+}
+
+setupDropZone('dropZoneOpen', 'openFile', 'labelOpen');
+setupDropZone('dropZoneCooloff', 'cooloffFile', 'labelCooloff');
+setupDropZone('dropZoneDisputed', 'disputedFile', 'labelDisputed');
+
+function parseCSV(file) {
+    return new Promise((resolve) => {
+        if (!file) return resolve([]);
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            transformHeader: h => h.trim().toLowerCase(),
+            complete: results => resolve(results.data)
+        });
+    });
+}
+
+function getVal(row, possibleKeys) {
+    for (let key of possibleKeys) {
+        if (row[key] !== undefined && row[key] !== null && row[key].toString().trim() !== "") {
+            return row[key].toString().trim();
+        }
+    }
+    return "";
+}
+
+function parseRawTimestamp(dateStr) {
+    if (!dateStr || dateStr === "'-" || dateStr === "-") return NaN;
+    let cleanStr = dateStr.trim();
+    let parts = cleanStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+    if (parts) {
+        return Date.UTC(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5]));
+    }
+    return Date.parse(cleanStr);
+}
+
+function isSamePHTShiftDay(dateStr, targetDay) {
+    if (!dateStr) return false;
+
+    const match = dateStr.match(/-\d{2}-?(\d{2})/);
+    if (match) {
+        return parseInt(match[1], 10) === parseInt(targetDay, 10);
+    }
+
+    let parsedMs = parseRawTimestamp(dateStr);
+    if (isNaN(parsedMs)) return false;
+
+    let phtTime = new Date(parsedMs + (8 * 60 * 60 * 1000)); 
+    if (phtTime.getUTCHours() < 8) {
+        phtTime.setUTCDate(phtTime.getUTCDate() - 1);
+    }
+
+    return phtTime.getUTCDate() === parseInt(targetDay, 10);
+}
+
+function formatZendeskSLA(diffMins) {
+    if (diffMins === null || isNaN(diffMins)) return "-";
+
+    let prefix = diffMins < 0 ? "-" : "";
+    let absMins = Math.abs(diffMins);
+
+    if (absMins < 60) {
+        return prefix + absMins + "m";
+    } else if (absMins < 1440) {
+        let hours = Math.floor(absMins / 60);
+        return prefix + hours + "h";
+    } else {
+        let days = Math.floor(absMins / 1440);
+        return prefix + days + "d";
+    }
+}
+
+function parseAnySLA(rawSlaVal, refTimeMs) {
+    if (!rawSlaVal || typeof rawSlaVal !== 'string' || rawSlaVal === "'-" || rawSlaVal === "-") return null;
+    let str = rawSlaVal.trim();
+    let diffMins = null;
+
+    let d = str.match(/^(-?\d+)\s*d/i);
+    let h = str.match(/^(-?\d+)\s*h/i);
+    let m = str.match(/^(-?\d+)\s*m/i);
+
+    if (d || h || m) {
+        diffMins = 0;
+        if (d) diffMins += parseInt(d[1], 10) * 1440;
+        if (h) diffMins += parseInt(h[1], 10) * 60;
+        if (m) diffMins += parseInt(m[1], 10);
+    } else {
+        let parsedMs = parseRawTimestamp(str);
+        if (!isNaN(parsedMs)) {
+            let diffMs = parsedMs - refTimeMs;
+            diffMins = Math.round(diffMs / (1000 * 60));
+        }
+    }
+
+    if (diffMins === null) {
+        return { minutes: 99999, label: str };
+    }
+
+    return { 
+        minutes: diffMins, 
+        label: formatZendeskSLA(diffMins)
+    };
+}
+
+function extractRefTimeFromFilename(fileObj, rows) {
+    if (fileObj && fileObj.name) {
+        let match = fileObj.name.match(/(\d{4})-(\d{2})-(\d{2})[-_](\d{2})(\d{2})/);
+        if (match) {
+            let year = parseInt(match[1]);
+            let month = parseInt(match[2]) - 1;
+            let day = parseInt(match[3]);
+            let hh = parseInt(match[4]);
+            let mm = parseInt(match[5]);
+            return Date.UTC(year, month, day, hh, mm);
+        }
+    }
+    
+    let earliestSlaMs = Infinity;
+    const slaKeys = ["sla", "sla time", "time remaining", "remaining sla", "due in", "expires in", "next sla breach", "sla breach", "sla_next_breach_at"];
+    rows.forEach(r => {
+        let val = getVal(r, slaKeys);
+        let parsedMs = parseRawTimestamp(val);
+        if (!isNaN(parsedMs) && parsedMs < earliestSlaMs) {
+            earliestSlaMs = parsedMs;
+        }
+    });
+
+    if (earliestSlaMs !== Infinity) {
+        return earliestSlaMs - (7 * 60 * 1000); 
+    }
+
+    return Date.now();
+}
+
+async function processCSVs() {
+    const openFile = document.getElementById('openFile').files[0];
+    const cooloffFile = document.getElementById('cooloffFile').files[0];
+    const disputedFile = document.getElementById('disputedFile').files[0];
+    const filterDay = document.getElementById('filterDay').value;
+    const quota = parseInt(document.getElementById('targetQuota').value) || 300;
+
+    if (!filterDay) {
+        alert("Please specify a Day of the Month (1-31).");
+        return;
+    }
+
+    const [openData, cooloffData, disputedData] = await Promise.all([
+        parseCSV(openFile),
+        parseCSV(cooloffFile),
+        parseCSV(disputedFile)
+    ]);
+
+    let activeAgents = ROSTER.filter(agent => !EXCLUDED.includes(agent));
+
+    let metrics = {};
+    activeAgents.forEach(agent => {
+        metrics[agent] = { open: 0, cooloff: 0, disputed: 0, slaList: [] };
+    });
+
+    const agentKeys = [
+        "assignee", "agent", "name", "assignee name", "solved by", 
+        "agent name", "user", "submitter", "updater", "assignee_name", "agent_name"
+    ];
+    
+    // Prioritize "solved" first for new prod exported headers
+    const timeKeys = [
+        "solved", "solved at", "solved_at",
+        "assignee updated", "updated", "updated at", 
+        "requested", "created at", "timestamp", "date", "created date", 
+        "created", "updated_at", "created_at", "last updated"
+    ];
+    const statusKeys = [
+        "ticket status", "status", "state", "ticket_status"
+    ];
+    const slaKeys = [
+        "sla", "sla time", "time remaining", "remaining sla", 
+        "due in", "expires in", "sla status", "next sla breach", 
+        "sla breach", "sla_next_breach_at"
+    ];
+
+    let refTimeMs = extractRefTimeFromFilename(openFile, openData);
+
+    openData.forEach(row => {
+        let agent = getVal(row, agentKeys);
+        let status = getVal(row, statusKeys);
+        let slaStr = getVal(row, slaKeys);
+
+        let matchedAgent = activeAgents.find(a => a.toLowerCase() === agent.toLowerCase());
+        if (matchedAgent && (status.toLowerCase() === "open" || status === "")) {
+            metrics[matchedAgent].open++;
+            
+            let slaObj = parseAnySLA(slaStr, refTimeMs);
+            if (slaObj) {
+                metrics[matchedAgent].slaList.push(slaObj);
+            }
+        }
+    });
+
+    cooloffData.forEach(row => {
+        let agent = getVal(row, agentKeys);
+        let status = getVal(row, statusKeys);
+
+        let matchedAgent = activeAgents.find(a => a.toLowerCase() === agent.toLowerCase());
+        if (matchedAgent && (status.toLowerCase() === "cool off" || status.toLowerCase() === "cooloff" || status === "")) {
+            metrics[matchedAgent].cooloff++;
+        }
+    });
+
+    // Excluded 'expired' from valid dispute statuses
+    const validDisputeStatuses = ['successful', 'unsuccessful', 'denied', 'already refunded', 'cool off', 'escalated', 'closed', 'solved'];
+
+    disputedData.forEach(row => {
+        let agent = getVal(row, agentKeys);
+        let timeStr = getVal(row, timeKeys);
+        let status = getVal(row, statusKeys).toLowerCase();
+
+        let matchedAgent = activeAgents.find(a => a.toLowerCase() === agent.toLowerCase());
+        
+        if (matchedAgent) {
+            const isValidStatus = status === "" || validDisputeStatuses.includes(status);
+            
+            if (isValidStatus && isSamePHTShiftDay(timeStr, filterDay)) {
+                metrics[matchedAgent].disputed++;
+            }
+        }
+    });
+
+    lastResults = activeAgents.map(agent => {
+        let open = metrics[agent].open;
+        let cool = metrics[agent].cooloff;
+        let disp = metrics[agent].disputed;
+        let slaList = metrics[agent].slaList;
+        let totalProcessed = open + cool + disp;
+        let needed = quota - totalProcessed;
+
+        slaList.sort((a, b) => a.minutes - b.minutes);
+
+        let slaSummary = "-";
+        let isUrgent = false;
+
+        if (slaList.length === 1) {
+            slaSummary = slaList[0].label;
+            if (slaList[0].minutes <= 60) isUrgent = true;
+        } else if (slaList.length > 1) {
+            let lowest = slaList[0].label;
+            let highest = slaList[slaList.length - 1].label;
+
+            slaSummary = (lowest === highest) ? lowest : (lowest + " -" + highest);
+            if (slaList[0].minutes <= 60) isUrgent = true;
+        }
+
+        return { agent, open, cool, disp, needed, slaSummary, isUrgent, totalProcessed };
+    });
+
+    renderViews(lastResults);
+}
+
+function setScheduleFilter(filterType) {
+    currentScheduleFilter = filterType;
+    if (lastResults.length > 0) {
+        renderViews(lastResults);
+    }
+}
+
+function setViewMode(mode) {
+    currentViewMode = mode;
+    if (lastResults.length > 0) {
+        renderViews(lastResults);
+    }
+}
+
+function getSortedPrimaryAgents(data, filterType) {
+    let primaryData = data.filter(r => !SECONDARY_AGENTS.includes(r.agent) && !excludedCSR1Agents.has(r.agent));
+
+    if (filterType === 'liveagents') {
+        primaryData = primaryData.filter(r => LIVE_AGENTS.includes(r.agent));
+        return primaryData.sort((a, b) => {
+            return LIVE_AGENTS.indexOf(a.agent) - LIVE_AGENTS.indexOf(b.agent);
+        });
+    } else if (filterType === 'myagents') {
+        primaryData = primaryData.filter(r => MY_AGENTS.includes(r.agent));
+        return primaryData.sort((a, b) => {
+            return MY_AGENTS.indexOf(a.agent) - MY_AGENTS.indexOf(b.agent);
+        });
+    } else if (filterType === 'otheragents') {
+        primaryData = primaryData.filter(r => !MY_AGENTS.includes(r.agent) && !LIVE_AGENTS.includes(r.agent));
+        return primaryData.sort((a, b) => {
+            let indexA = ALL_CSR1_ORDER.indexOf(a.agent);
+            let indexB = ALL_CSR1_ORDER.indexOf(b.agent);
+
+            if (indexA !== -1 && indexB !== -1) {
+                return indexA - indexB;
+            }
+            return b.disp - a.disp;
+        });
+    } else if (filterType === 'frisat') {
+        primaryData = primaryData.filter(r => FRI_SAT_AGENTS.includes(r.agent));
+        return primaryData.sort((a, b) => {
+            return FRI_SAT_AGENTS.indexOf(a.agent) - FRI_SAT_AGENTS.indexOf(b.agent);
+        });
+    } else if (filterType === 'sunmon') {
+        primaryData = primaryData.filter(r => SUN_MON_AGENTS.includes(r.agent));
+        return primaryData.sort((a, b) => {
+            return SUN_MON_AGENTS.indexOf(a.agent) - SUN_MON_AGENTS.indexOf(b.agent);
+        });
+    } else {
+        // 'all' filter: Exclude LIVE_AGENTS from All CSR 1
+        primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent));
+        return primaryData.sort((a, b) => {
+            let indexA = ALL_CSR1_ORDER.indexOf(a.agent);
+            let indexB = ALL_CSR1_ORDER.indexOf(b.agent);
+
+            if (indexA !== -1 && indexB !== -1) {
+                return indexA - indexB;
+            }
+            return b.disp - a.disp;
+        });
+    }
+}
+
+/* RANDOMIZED EXPORT FOR TAMPERMONKEY QUEUE */
+function exportForTampermonkey() {
+    const primaryData = getSortedPrimaryAgents(lastResults, currentScheduleFilter);
+
+    let queue = primaryData
+        .filter(r => r.needed > 0)
+        .map(r => ({ agent: r.agent, count: r.needed }));
+
+    // Fisher-Yates Randomization Algorithm
+    for (let i = queue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [queue[i], queue[j]] = [queue[j], queue[i]];
+    }
+
+    const dayVal = document.getElementById('filterDay').value || 'export';
+    const blob = new Blob([JSON.stringify(queue, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "agent_assignment_queue_" + currentScheduleFilter + "_day_" + dayVal + "_randomized.json";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/* COPY ONLY THE TABLE / GRID ELEMENT ITSELF (EXCLUDES TITLES & CSR 2) */
+async function copyViewImageToClipboard() {
+    const btn = document.getElementById('copyImgBtnMain');
+    
+    // Target strictly the primary table or primary grid element
+    const targetElement = currentViewMode === 'list' 
+        ? document.getElementById('primaryTable') 
+        : document.getElementById('primaryGrid');
+
+    if (!targetElement || lastResults.length === 0) {
+        alert("No view data available to copy!");
+        return;
+    }
+
+    try {
+        btn.textContent = "⏳ Copying Image...";
+
+        const canvas = await html2canvas(targetElement, {
+            scale: 2,
+            backgroundColor: currentViewMode === 'list' ? '#ffffff' : '#0a0a0a',
+            logging: false,
+            useCORS: true
+        });
+
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                alert("Failed to render image blob.");
+                btn.textContent = currentViewMode === 'list' ? "📷 Copy Table Image" : "📷 Copy Card View Image";
+                return;
+            }
+
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+            ]);
+
+            btn.textContent = "✅ Image Copied!";
+            setTimeout(() => {
+                btn.textContent = currentViewMode === 'list' ? "📷 Copy Table Image" : "📷 Copy Card View Image";
+            }, 3000);
+
+        }, 'image/png');
+
+    } catch (err) {
+        console.error("Clipboard image copy failed:", err);
+        alert("Unable to copy image directly to clipboard!");
+        btn.textContent = currentViewMode === 'list' ? "📷 Copy Table Image" : "📷 Copy Card View Image";
+    }
+}
+
+/* COPY INDIVIDUAL AGENT CARD TO CLIPBOARD */
+async function copySingleCardImage(btnElement, cardId) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+
+    const originalText = btnElement.textContent;
+
+    try {
+        btnElement.textContent = "⏳ Copying...";
+
+        btnElement.style.display = 'none';
+
+        const canvas = await html2canvas(card, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            logging: false,
+            useCORS: true
+        });
+
+        btnElement.style.display = 'inline-block';
+
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                alert("Failed to render card image blob.");
+                btnElement.textContent = originalText;
+                return;
+            }
+
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+            ]);
+
+            btnElement.textContent = "✅ Copied!";
+            setTimeout(() => {
+                btnElement.textContent = originalText;
+            }, 2500);
+
+        }, 'image/png');
+
+    } catch (err) {
+        console.error("Card image copy failed:", err);
+        btnElement.style.display = 'inline-block';
+        alert("Unable to copy card image to clipboard!");
+        btnElement.textContent = originalText;
+    }
+}
+
+/* 1. GENERATES TABLE/LIST VIEW HTML */
+function generateTableHTML(dataList, tableId, isCSR1 = false) {
+    let html = '<table id="' + tableId + '">' +
+        '<thead>' +
+            '<tr>' +
+                '<th class="text-left">Assignee</th>' +
+                '<th>Open Tickets</th>' +
+                '<th>Cool Off Tickets</th>' +
+                '<th>Total Tickets Disputed</th>' +
+                '<th>Needed Tickets</th>' +
+                '<th>SLA</th>' +
+            '</tr>' +
+        '</thead>' +
+        '<tbody>';
+
+    dataList.forEach(r => {
+        let neededColor = r.needed < 0 ? '#dc2626' : '#16a34a';
+        let badgeClass = r.isUrgent ? 'sla-badge urgent' : 'sla-badge';
+
+        let slaHtml = r.slaSummary !== "-" 
+            ? '<span class="' + badgeClass + '">' + r.slaSummary + '</span>' 
+            : '<span style="color: #9ca3af;">-</span>';
+
+        let removeBtn = isCSR1 
+            ? '<button data-html2canvas-ignore="true" class="btn-remove-agent" onclick="removeCSR1Agent(\'' + r.agent.replace(/'/g, "\\'") + '\')" title="Remove agent (Absent/Leave)">✕</button>' 
+            : '';
+
+        html += '<tr>' +
+            '<td class="text-left">' + removeBtn + r.agent + '</td>' +
+            '<td>' + r.open + '</td>' +
+            '<td>' + r.cool + '</td>' +
+            '<td><b>' + r.disp + '</b></td>' +
+            '<td><span style="color:' + neededColor + '; font-weight:bold;">' + r.needed + '</span></td>' +
+            '<td>' + slaHtml + '</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table>';
+    return html;
+}
+
+/* 2. GENERATES CARD GRID VIEW HTML */
+function generateCardViewHTML(dataList, gridId, isCSR1 = false) {
+    let html = '<div class="card-grid" id="' + gridId + '">';
+
+    dataList.forEach((r, idx) => {
+        let neededColor = r.needed < 0 ? '#dc2626' : '#16a34a';
+        let badgeClass = r.isUrgent ? 'sla-badge urgent' : 'sla-badge';
+
+        let slaHtml = r.slaSummary !== "-" 
+            ? '<span class="' + badgeClass + '">' + r.slaSummary + '</span>' 
+            : '<span style="color: #9ca3af;">-</span>';
+
+        const cardId = gridId + '_card_' + idx;
+
+        let removeCardBtn = isCSR1 
+            ? '<button data-html2canvas-ignore="true" class="btn-card-remove" onclick="removeCSR1Agent(\'' + r.agent.replace(/'/g, "\\'") + '\')" title="Remove agent (Absent/Leave)">✕ Absent</button>' 
+            : '';
+
+        html += '' +
+        '<div class="agent-card" id="' + cardId + '">' +
+            '<div class="card-header">' +
+                '<h3 class="agent-name">' + r.agent + '</h3>' +
+                '<div style="display:flex; gap:4px; align-items:center;">' +
+                    removeCardBtn +
+                    '<button class="btn-card-copy" onclick="copySingleCardImage(this, \'' + cardId + '\')">📷 Copy</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="card-stats">' +
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Open</span>' +
+                    '<span class="stat-value">' + r.open + '</span>' +
+                '</div>' +
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Cool Off</span>' +
+                    '<span class="stat-value">' + r.cool + '</span>' +
+                '</div>' +
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Disputed</span>' +
+                    '<span class="stat-value">' + r.disp + '</span>' +
+                '</div>' +
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Needed</span>' +
+                    '<span class="stat-value" style="color: ' + neededColor + ';">' + r.needed + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="card-footer">' +
+                '<span class="stat-label">SLA Status</span>' +
+                '<div>' + slaHtml + '</div>' +
+            '</div>' +
+        '</div>';
+    });
+
+    html += '</div>';
+    return html;
+}
+
+function renderViews(data) {
+    const primaryData = getSortedPrimaryAgents(data, currentScheduleFilter);
+    const secondaryData = data.filter(r => SECONDARY_AGENTS.includes(r.agent));
+
+    let html = '<div class="filter-container">' +
+        '<button class="btn-filter ' + (currentScheduleFilter === 'all' ? 'active' : '') + '" onclick="setScheduleFilter(\'all\')">All CSR 1</button>' +
+        '<button class="btn-filter ' + (currentScheduleFilter === 'liveagents' ? 'active' : '') + '" onclick="setScheduleFilter(\'liveagents\')">Live Agents</button>' +
+        '<button class="btn-filter ' + (currentScheduleFilter === 'myagents' ? 'active' : '') + '" onclick="setScheduleFilter(\'myagents\')">My Agents</button>' +
+        '<button class="btn-filter ' + (currentScheduleFilter === 'otheragents' ? 'active' : '') + '" onclick="setScheduleFilter(\'otheragents\')">Other Agents</button>' +
+        '<button class="btn-filter ' + (currentScheduleFilter === 'frisat' ? 'active' : '') + '" onclick="setScheduleFilter(\'frisat\')">Fri - Sat Agents</button>' +
+        '<button class="btn-filter ' + (currentScheduleFilter === 'sunmon' ? 'active' : '') + '" onclick="setScheduleFilter(\'sunmon\')">Sun - Mon Agents</button>' +
+        
+        '<div class="view-switcher-group">' +
+            '<button class="btn-view ' + (currentViewMode === 'list' ? 'active' : '') + '" onclick="setViewMode(\'list\')">☰ List View</button>' +
+            '<button class="btn-view ' + (currentViewMode === 'card' ? 'active' : '') + '" onclick="setViewMode(\'card\')">▦ Card View</button>' +
+        '</div>' +
+    '</div>';
+
+    let copyBtnLabel = currentViewMode === 'list' ? '📷 Copy Table Image' : '📷 Copy Card View Image';
+
+    html += '<div class="top-action-bar">';
+    if (excludedCSR1Agents.size > 0) {
+        html += '<button onclick="restoreAllCSR1Agents()" class="btn-reset-agents" data-html2canvas-ignore="true">' +
+            '🔄 Restore Removed CSR 1 (' + excludedCSR1Agents.size + ')' +
+        '</button>';
+    }
+    html += '' +
+        '<button onclick="copyViewImageToClipboard()" id="copyImgBtnMain" class="btn-copy-img-main">' +
+            copyBtnLabel +
+        '</button>' +
+        '<button onclick="exportForTampermonkey()" class="btn-export">' +
+            '🎲 Export Randomized Tampermonkey Queue JSON (' + currentScheduleFilter.toUpperCase() + ')' +
+        '</button>' +
+    '</div>';
+
+    html += '<div id="viewRenderContainer">';
+
+    let groupTitle = "CSR 1 Agents";
+    if (currentScheduleFilter === 'liveagents') groupTitle = "Live Agents";
+    if (currentScheduleFilter === 'myagents') groupTitle = "CSR 1 Agents (My Agents)";
+    if (currentScheduleFilter === 'otheragents') groupTitle = "CSR 1 Agents (Other Agents)";
+    if (currentScheduleFilter === 'frisat') groupTitle = "CSR 1 Agents (Fri - Sat Schedule)";
+    if (currentScheduleFilter === 'sunmon') groupTitle = "CSR 1 Agents (Sun - Mon Schedule)";
+
+    html += '<h2 class="table-title">' + groupTitle + '</h2>';
+    html += currentViewMode === 'list' 
+        ? generateTableHTML(primaryData, "primaryTable", true)
+        : generateCardViewHTML(primaryData, "primaryGrid", true);
+
+    html += '<h2 class="table-title">CSR 2 Agents</h2>';
+    html += currentViewMode === 'list'
+        ? generateTableHTML(secondaryData, "secondaryTable", false)
+        : generateCardViewHTML(secondaryData, "secondaryGrid", false);
+
+    html += '</div>';
+
+    document.getElementById('output').innerHTML = html;
+}
+</script>
+</body>
+</html>
