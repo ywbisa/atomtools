@@ -922,6 +922,7 @@ async function processCSVs() {
         let cool = metrics[agent].cooloff;
         let disp = metrics[agent].disputed;
         let slaList = metrics[agent].slaList;
+        let agentsTicket = open + disp;
         let totalProcessed = open + cool + disp;
         let needed = quota - totalProcessed;
 
@@ -941,7 +942,7 @@ async function processCSVs() {
             if (slaList[0].minutes <= 60) isUrgent = true;
         }
 
-        return { agent, open, cool, disp, needed, slaSummary, isUrgent, totalProcessed };
+        return { agent, open, cool, disp, agentsTicket, needed, slaSummary, isUrgent, totalProcessed };
     });
 
     renderViews(lastResults);
@@ -1139,6 +1140,7 @@ function generateTableHTML(dataList, tableId, isCSR1 = false) {
                 '<th>Open Tickets</th>' +
                 '<th>Cool Off Tickets</th>' +
                 '<th>Total Tickets Disputed</th>' +
+                '<th>Agents Ticket</th>' +
                 '<th>Needed Tickets</th>' +
                 '<th>SLA</th>' +
             '</tr>' +
@@ -1148,6 +1150,7 @@ function generateTableHTML(dataList, tableId, isCSR1 = false) {
     dataList.forEach(r => {
         let neededColor = r.needed < 0 ? '#dc2626' : '#16a34a';
         let badgeClass = r.isUrgent ? 'sla-badge urgent' : 'sla-badge';
+        let agentsTicket = r.open + r.disp;
 
         let slaHtml = r.slaSummary !== "-" 
             ? '<span class="' + badgeClass + '">' + r.slaSummary + '</span>' 
@@ -1162,6 +1165,7 @@ function generateTableHTML(dataList, tableId, isCSR1 = false) {
             '<td>' + r.open + '</td>' +
             '<td>' + r.cool + '</td>' +
             '<td><b>' + r.disp + '</b></td>' +
+            '<td><b>' + agentsTicket + '</b></td>' +
             '<td><span style="color:' + neededColor + '; font-weight:bold;">' + r.needed + '</span></td>' +
             '<td>' + slaHtml + '</td>' +
         '</tr>';
@@ -1178,6 +1182,7 @@ function generateCardViewHTML(dataList, gridId, isCSR1 = false) {
     dataList.forEach((r, idx) => {
         let neededColor = r.needed < 0 ? '#dc2626' : '#16a34a';
         let badgeClass = r.isUrgent ? 'sla-badge urgent' : 'sla-badge';
+        let agentsTicket = r.open + r.disp;
 
         let slaHtml = r.slaSummary !== "-" 
             ? '<span class="' + badgeClass + '">' + r.slaSummary + '</span>' 
@@ -1212,6 +1217,10 @@ function generateCardViewHTML(dataList, gridId, isCSR1 = false) {
                     '<span class="stat-value">' + r.disp + '</span>' +
                 '</div>' +
                 '<div class="stat-item">' +
+                    '<span class="stat-label">Agents Ticket</span>' +
+                    '<span class="stat-value">' + agentsTicket + '</span>' +
+                '</div>' +
+                '<div class="stat-item" style="grid-column: span 2;">' +
                     '<span class="stat-label">Needed</span>' +
                     '<span class="stat-value" style="color: ' + neededColor + ';">' + r.needed + '</span>' +
                 '</div>' +
