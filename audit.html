@@ -24,7 +24,7 @@
             --accent-blue: #38bdf8;
         }
 
-        * { box-sizing: border-box; }
+- { box-sizing: border-box; }
 
         body { 
             font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
@@ -42,7 +42,7 @@
         /* BRAND HEADER */
         .brand-header {
             width: 100%;
-            max-width: 1200px;
+            max-width: 1150px;
             margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
@@ -90,7 +90,7 @@
             border-radius: 8px; 
             border: 1px solid var(--border-color);
             width: 100%;
-            max-width: 1200px; 
+            max-width: 1150px; 
             margin-bottom: 15px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         }
@@ -125,16 +125,16 @@
 
         /* DROP ZONE */
         .drop-zone {
-            border: 1.5px dashed var(--border-color);
+            border: 1px dashed var(--border-color);
             border-radius: 6px;
-            padding: 12px;
+            padding: 10px;
             text-align: center;
             background-color: #0b0f19;
             color: var(--text-muted);
             cursor: pointer;
             transition: all 0.2s ease;
             font-size: 12px;
-            min-height: 52px;
+            height: 38px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -142,7 +142,7 @@
         }
 
         .drop-zone * {
-            pointer-events: none; /* Crucial to stop child elements from firing dragleave */
+            pointer-events: none;
         }
 
         .drop-zone:hover, .drop-zone.dragover {
@@ -151,9 +151,7 @@
             color: var(--brand-beige);
         }
 
-        .drop-zone input[type="file"] { 
-            display: none; 
-        }
+        .drop-zone input[type="file"] { display: none; }
 
         input[type="number"] {
             padding: 6px 10px;
@@ -164,7 +162,7 @@
             font-size: 12px;
             font-weight: 600;
             outline: none;
-            height: 52px;
+            height: 38px;
             width: 90px;
         }
 
@@ -181,7 +179,7 @@
             cursor: pointer;
             font-weight: 700;
             font-size: 11px;
-            height: 52px;
+            height: 38px;
             transition: opacity 0.2s ease;
             white-space: nowrap;
             text-transform: uppercase;
@@ -198,7 +196,7 @@
             gap: 12px; 
             margin-bottom: 15px; 
             width: 100%;
-            max-width: 1200px;
+            max-width: 1150px;
         }
 
         .metric-card { 
@@ -246,7 +244,7 @@
             border-radius: 4px; 
             background-color: #0b0f19;
             color: var(--text-main);
-            width: 340px; 
+            width: 320px; 
             outline: none; 
         }
 
@@ -547,19 +545,16 @@
         const fileInput = document.getElementById('fileInput');
         const filterDayInput = document.getElementById('filterDay');
 
-        // ==========================================
-        // BULLETPROOF DRAG & DROP HANDLER
-        // ==========================================
-        
-        // 1. Globally prevent browser from opening/downloading dropped files
+        // --- BULLETPROOF DRAG AND DROP ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            window.addEventListener(eventName, function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }, false);
+            dropZone.addEventListener(eventName, preventDefaults, false);
         });
 
-        // 2. Add visual highlight when dragging over the specific drop zone
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
         });
@@ -568,45 +563,38 @@
             dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
         });
 
-        // 3. Handle the actual file drop
-        dropZone.addEventListener('drop', function(e) {
+        dropZone.addEventListener('drop', (e) => {
             let dt = e.dataTransfer;
             let files = dt.files;
-            
-            if (files && files.length > 0) {
-                try {
-                    // Try to attach to file input for consistency
-                    fileInput.files = files;
-                } catch (err) {
-                    // Ignore DOM exception, just process it directly
-                }
+            if (files.length > 0) {
+                try { fileInput.files = files; } catch (err) {}
                 processFile(files[0]);
             }
         }, false);
 
-        // 4. Handle manual click to browse
-        dropZone.addEventListener('click', () => {
-            fileInput.value = ''; // Reset input to allow re-uploading the same file
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', function(e) {
-            if (this.files && this.files.length > 0) {
-                processFile(this.files[0]);
+        // Fallback: if dropped anywhere else on the page, prevent browser download and load the file
+        document.addEventListener('dragover', (e) => e.preventDefault(), false);
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            let files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) {
+                try { fileInput.files = files; } catch (err) {}
+                processFile(files[0]);
             }
-        });
+        }, false);
 
-        // ==========================================
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) processFile(e.target.files[0]);
+        });
 
         filterDayInput.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') processData();
         });
 
         function processFile(file) {
-            if (!file) return;
-
             loadedFileName = file.name;
-            document.getElementById('dropZoneText').innerHTML = `Loaded: <strong>${escapeHtml(file.name)}</strong>`;
+            document.getElementById('dropZoneText').innerHTML = `Loaded: <strong>${file.name}</strong>`;
             const reader = new FileReader();
 
             reader.onload = function(e) {
@@ -734,7 +722,7 @@
             }
 
             const targetDayVal = filterDayInput.value ? parseInt(filterDayInput.value, 10) : null;
-            const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, '').toLowerCase());
+            const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"\$/g, '').toLowerCase());
             
             let idIdx = headers.findIndex(h => h === 'id' || h.includes('ticket id'));
             let assigneeIdx = headers.findIndex(h => h.includes('assignee') && !h.includes('updated'));
@@ -758,14 +746,14 @@
             if (idIdx === -1) idIdx = 0;
             if (statusIdx === -1) statusIdx = 1;
             if (assigneeIdx === -1) assigneeIdx = 2;
-            if (reasonIdx === -1) reasonIdx = 6;
+            if (reasonIdx === -1) reasonIdx = 9;
 
             rawDataset = [];
             hiddenTicketIds.clear();
             const affectedAgents = new Set();
 
             for (let i = 1; i < lines.length; i++) {
-                const cols = parseCSVLine(lines[i]).map(c => c.replace(/^"|"$/g, ''));
+                const cols = parseCSVLine(lines[i]).map(c => c.replace(/^"|"\$/g, ''));
                 if (cols.length <= Math.max(idIdx, assigneeIdx, statusIdx, reasonIdx)) continue;
 
                 const ticketId = cols[idIdx] || 'N/A';
@@ -783,7 +771,7 @@
                 const reasonLower = reason.toLowerCase();
                 const statusLower = status.toLowerCase();
 
-                // EVALUATE MIS-TAGGING RULES:
+                // EVALUATE UPDATED MIS-TAGGING RULES:
                 let isMisTagged = false;
                 let isReasonError = false;
                 let formattedReason = reason;
@@ -793,6 +781,7 @@
                 let subtotalCheck = { text: rawSubtotal || '-', isError: false };
 
                 // 1. Status: Expired
+                // Expired + Outside of Dispute Window is valid
                 if (statusLower.includes('expired')) {
                     subtotalCheck = evaluateOrderSubtotal(rawSubtotal, false);
                     if (isBlank) {
@@ -807,6 +796,7 @@
                     }
                 }
                 // 2. Status: Already Refunded
+                // Valid reasons: 'Order Successful', 'Cancelled Order', 'Cancelled by Merchant' (or any cancellation reason)
                 else if (statusLower.includes('already refunded') || statusLower.includes('refunded')) {
                     subtotalCheck = evaluateOrderSubtotal(rawSubtotal, false);
                     if (isBlank) {
@@ -818,7 +808,8 @@
                         isReasonError = true;
                     }
                 } 
-                // 3. Status: Successful (Must have 'Order Successful' AND a valid Order Subtotal > 0)
+                // 3. Status: Successful
+                // Must have 'Order Successful' AND a valid Order Subtotal > 0
                 else if (statusLower.includes('successful') && !statusLower.includes('unsuccessful')) {
                     if (isBlank) {
                         isMisTagged = true;
@@ -835,6 +826,7 @@
                     }
                 } 
                 // 4. Status: Unsuccessful
+                // Must have dispute threshold or other valid dispute reasons (not blank, not order successful, not cancelled)
                 else if (statusLower.includes('unsuccessful')) {
                     subtotalCheck = evaluateOrderSubtotal(rawSubtotal, false);
                     if (isBlank) {
@@ -849,7 +841,10 @@
                 // 5. Fallback for other status mismatches
                 else {
                     subtotalCheck = evaluateOrderSubtotal(rawSubtotal, false);
-                    if (isCancellationReason || reasonLower.includes('dispute threshold')) {
+                    if (isCancellationReason) {
+                        isMisTagged = true;
+                        isReasonError = true;
+                    } else if (reasonLower.includes('dispute threshold')) {
                         isMisTagged = true;
                         isReasonError = true;
                     }
@@ -980,10 +975,10 @@
 
             filteredDataset.forEach(row => {
                 const tr = document.createElement('tr');
-                const isBlankReason = row.reason.includes('[BLANK');
+                const isBlank = row.reason.includes('[BLANK');
                 const reasonClass = !row.isReasonError
                     ? 'reason-valid'
-                    : (isBlankReason ? 'reason-missing' : 'reason-col');
+                    : (isBlank ? 'reason-missing' : 'reason-col');
                 const subtotalClass = row.isSubtotalError ? 'reason-missing' : 'subtotal-valid';
 
                 tr.innerHTML = `
@@ -1010,12 +1005,7 @@
         }
 
         function escapeHtml(text) {
-            return String(text)
-                .replace(/&/g, "&")
-                .replace(/</g, "<")
-                .replace(/>/g, ">")
-                .replace(/"/g, """)
-                .replace(/'/g, "'");
+            return String(text).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
         }
 
         // --- COPY TO GCHAT FUNCTIONALITY ---
