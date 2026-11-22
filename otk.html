@@ -528,23 +528,6 @@ const LIVE_AGENTS = [
     "Saimor Panganiban"
 ];
 
-// My Agents Ordering
-const MY_AGENTS = [
-    "Kate Maglasang",
-    "Melvin De Jesus",
-    "Johas Camello",
-    "Jasmine Ceballos",
-    "Aljel Damalerio",
-    "Kiffe Belenson",
-    "Shem Justiniani",
-    "Saimor Panganiban",
-    "Jenschelle Eslais",
-    "Jenamie Sagetarios",
-    "Genevev Bantilan",
-    "Shaira Castillo",
-    "Ausie Delima"
-];
-
 // Fri - Sat Specific Ordering
 const FRI_SAT_AGENTS = [
     "Hazel Versuela",
@@ -567,7 +550,8 @@ const FRI_SAT_AGENTS = [
     "Marymay Musa",
     "Christian Antatico",
     "Janevic Alolor",
-    "Hannah Mautad"
+    "Hannah Mautad",
+    "Laurence James Quistadio"
 ];
 
 // Sun - Mon Specific Ordering
@@ -588,7 +572,6 @@ const SUN_MON_AGENTS = [
     "Shaira Castillo",
     "Harold Makiling",
     "Renzelkenn Bueno",
-    "Laurence James Quistadio",
     "John Turugan",
     "Erica Goloran",
     "Ausie Delima",
@@ -970,13 +953,8 @@ function getSortedPrimaryAgents(data, filterType) {
         return primaryData.sort((a, b) => {
             return LIVE_AGENTS.indexOf(a.agent) - LIVE_AGENTS.indexOf(b.agent);
         });
-    } else if (filterType === 'myagents') {
-        primaryData = primaryData.filter(r => MY_AGENTS.includes(r.agent));
-        return primaryData.sort((a, b) => {
-            return MY_AGENTS.indexOf(a.agent) - MY_AGENTS.indexOf(b.agent);
-        });
     } else if (filterType === 'otheragents') {
-        primaryData = primaryData.filter(r => !MY_AGENTS.includes(r.agent) && !LIVE_AGENTS.includes(r.agent));
+        primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent));
         return primaryData.sort((a, b) => {
             let indexA = ALL_CSR1_ORDER.indexOf(a.agent);
             let indexB = ALL_CSR1_ORDER.indexOf(b.agent);
@@ -1243,7 +1221,6 @@ function renderViews(data) {
     let html = '<div class="filter-container">' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'all' ? 'active' : '') + '" onclick="setScheduleFilter(\'all\')">All CSR 1</button>' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'liveagents' ? 'active' : '') + '" onclick="setScheduleFilter(\'liveagents\')">Live Agents</button>' +
-        '<button class="btn-filter ' + (currentScheduleFilter === 'myagents' ? 'active' : '') + '" onclick="setScheduleFilter(\'myagents\')">My Agents</button>' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'otheragents' ? 'active' : '') + '" onclick="setScheduleFilter(\'otheragents\')">Other Agents</button>' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'frisat' ? 'active' : '') + '" onclick="setScheduleFilter(\'frisat\')">Fri - Sat Agents</button>' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'sunmon' ? 'active' : '') + '" onclick="setScheduleFilter(\'sunmon\')">Sun - Mon Agents</button>' +
@@ -1275,7 +1252,6 @@ function renderViews(data) {
 
     let groupTitle = "CSR 1 Agents";
     if (currentScheduleFilter === 'liveagents') groupTitle = "Live Agents";
-    if (currentScheduleFilter === 'myagents') groupTitle = "CSR 1 Agents (My Agents)";
     if (currentScheduleFilter === 'otheragents') groupTitle = "CSR 1 Agents (Other Agents)";
     if (currentScheduleFilter === 'frisat') groupTitle = "CSR 1 Agents (Fri - Sat Schedule)";
     if (currentScheduleFilter === 'sunmon') groupTitle = "CSR 1 Agents (Sun - Mon Schedule)";
