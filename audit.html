@@ -1015,7 +1015,7 @@
                 return;
             }
 
-            const headers = ["ID", "Agent", "Status", "Reason", "Sub"];
+            const headers = ["ID", "Agent", "Status", "Reason", "Order Sub"];
             const compactRows = filteredDataset.map(row => {
                 // Compress agent name if longer than 18 chars (First + Last)
                 let agent = row.assignee.trim();
@@ -1026,11 +1026,8 @@
                     }
                 }
 
-                // Compress status for narrow chat bubble
-                let status = row.currentStatus.trim();
-                if (status.toLowerCase() === 'already refunded') {
-                    status = 'Refunded';
-                }
+                // Keep Ticket Status unchanged
+                const status = row.currentStatus.trim();
 
                 // Compress reason for narrow chat bubble
                 let reason = row.reason.trim();
@@ -1061,11 +1058,11 @@
             const pad = (str, width) => str.padEnd(width, ' ');
 
             let lines = [];
-            lines.push(`${pad(headers[0], widths[0])} | ${pad(headers[1], widths[1])} | ${pad(headers[2], widths[2])} | ${pad(headers[3], widths[3])} | ${pad(headers[4], widths[4])}`);
+            lines.push(`${pad(headers[0], widths[0])} | ${pad(headers[1], widths[1])} | ${pad(headers[2], widths[2])} | ${pad(headers[3], widths[3])} | ${headers[4]}`);
             lines.push(`${'-'.repeat(widths[0])}-+-${'-'.repeat(widths[1])}-+-${'-'.repeat(widths[2])}-+-${'-'.repeat(widths[3])}-+-${'-'.repeat(widths[4])}`);
             
             compactRows.forEach(cols => {
-                lines.push(`${pad(cols[0], widths[0])} | ${pad(cols[1], widths[1])} | ${pad(cols[2], widths[2])} | ${pad(cols[3], widths[3])} | ${pad(cols[4], widths[4])}`);
+                lines.push(`${pad(cols[0], widths[0])} | ${pad(cols[1], widths[1])} | ${pad(cols[2], widths[2])} | ${pad(cols[3], widths[3])} | ${cols[4]}`);
             });
 
             const textToCopy = "```\n" + lines.join('\n') + "\n```";
