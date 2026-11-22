@@ -125,7 +125,6 @@
 
         /* DROP ZONE */
         .drop-zone {
-            position: relative;
             border: 1.5px dashed var(--border-color);
             border-radius: 6px;
             padding: 12px;
@@ -140,11 +139,10 @@
             align-items: center;
             justify-content: center;
             font-weight: 500;
-            overflow: hidden;
         }
 
-        .drop-zone span {
-            pointer-events: none;
+        .drop-zone * {
+            pointer-events: none; /* Crucial to stop child elements from firing dragleave */
         }
 
         .drop-zone:hover, .drop-zone.dragover {
@@ -153,15 +151,8 @@
             color: var(--brand-beige);
         }
 
-        .drop-zone input[type="file"] {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-            z-index: 2;
+        .drop-zone input[type="file"] { 
+            display: none; 
         }
 
         input[type="number"] {
@@ -551,58 +542,61 @@
         let loadedFileName = "";
         let sortCol = 1; // Default: Agent Name
         let sortAsc = true;
-        let lastProcessedTime = 0;
 
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const filterDayInput = document.getElementById('filterDay');
 
-        // --- DRAG AND DROP (NATIVE FILE INPUT + PAGE-WIDE FALLBACK) ---
-        fileInput.addEventListener('dragenter', () => dropZone.classList.add('dragover'));
-        fileInput.addEventListener('dragover', () => dropZone.classList.add('dragover'));
-        fileInput.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        fileInput.addEventListener('drop', (e) => {
-            dropZone.classList.remove('dragover');
-            const droppedFile = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-            if (droppedFile) {
-                setTimeout(() => {
-                    if (Date.now() - lastProcessedTime >= 150) {
-                        processFile(droppedFile);
-                    }
-                }, 50);
-            }
-        });
-
-        fileInput.addEventListener('click', () => {
-            fileInput.value = '';
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                processFile(e.target.files[0]);
-            }
-        });
-
-        // Prevent accidental browser download if dropped outside the drop zone
+        // ==========================================
+        // BULLETPROOF DRAG & DROP HANDLER
+        // ==========================================
+        
+        // 1. Globally prevent browser from opening/downloading dropped files
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            document.addEventListener(eventName, (e) => {
-                if (e.target === fileInput) return;
+            window.addEventListener(eventName, function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-
-                if (eventName === 'dragenter' || eventName === 'dragover') {
-                    dropZone.classList.add('dragover');
-                } else if (eventName === 'dragleave') {
-                    dropZone.classList.remove('dragover');
-                } else if (eventName === 'drop') {
-                    dropZone.classList.remove('dragover');
-                    const files = e.dataTransfer && e.dataTransfer.files;
-                    if (files && files.length > 0) {
-                        processFile(files[0]);
-                    }
-                }
-            }, true);
+            }, false);
         });
+
+        // 2. Add visual highlight when dragging over the specific drop zone
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
+
+        // 3. Handle the actual file drop
+        dropZone.addEventListener('drop', function(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            
+            if (files && files.length > 0) {
+                try {
+                    // Try to attach to file input for consistency
+                    fileInput.files = files;
+                } catch (err) {
+                    // Ignore DOM exception, just process it directly
+                }
+                processFile(files[0]);
+            }
+        }, false);
+
+        // 4. Handle manual click to browse
+        dropZone.addEventListener('click', () => {
+            fileInput.value = ''; // Reset input to allow re-uploading the same file
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            if (this.files && this.files.length > 0) {
+                processFile(this.files[0]);
+            }
+        });
+
+        // ==========================================
 
         filterDayInput.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') processData();
@@ -610,9 +604,6 @@
 
         function processFile(file) {
             if (!file) return;
-            const now = Date.now();
-            if (now - lastProcessedTime < 150) return;
-            lastProcessedTime = now;
 
             loadedFileName = file.name;
             document.getElementById('dropZoneText').innerHTML = `Loaded: <strong>${escapeHtml(file.name)}</strong>`;
