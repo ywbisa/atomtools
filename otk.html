@@ -280,6 +280,30 @@
             background-color: #e9f0f6;
         }
 
+        .assignee-cell {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .assignee-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .shift-badge {
+            background-color: #d5e1ed;
+            color: #1e3a5f;
+            border: 1px solid #b6c8dc;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+
         tr:nth-child(even) td:not(.text-left) { background-color: #f8fafc; }
         tr:nth-child(odd) td:not(.text-left) { background-color: #ffffff; }
         
@@ -292,7 +316,7 @@
         /* CARD VIEW LAYOUT STYLING */
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(275px, 1fr));
             gap: 12px;
             margin-bottom: 20px;
         }
@@ -313,6 +337,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 6px;
             border-bottom: 2px solid #7288a3;
             background-color: #d2dee9;
             margin: -12px -12px 0 -12px;
@@ -321,10 +346,18 @@
             border-top-right-radius: 5px;
         }
 
+        .card-title-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            flex: 1;
+        }
+
         .agent-name {
             font-weight: 400;
             color: #0f172a;
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             margin: 0;
             white-space: nowrap;
             overflow: hidden;
@@ -381,6 +414,7 @@
             font-weight: 700;
             cursor: pointer;
             transition: background-color 0.2s;
+            flex-shrink: 0;
         }
         .btn-card-copy:hover {
             background-color: #0a84ff;
@@ -457,53 +491,123 @@ let currentScheduleFilter = 'all';
 let currentViewMode = 'list'; // Default View: 'list' or 'card'
 let excludedCSR1Agents = new Set(); // Stores absent/on-leave CSR 1 agents
 
-const ROSTER = [
-    "Kate Maglasang",
-    "Hazel Versuela",
-    "Eron Casuyac",
-    "Jasmine Ceballos",
-    "Melvin De Jesus",
-    "Donna Cristobal",
-    "Jenschelle Eslais",
-    "Chaira Wata",
-    "Maria Sale",
-    "Daniela Jane Sulelom",
-    "Daisy Beronilla",
-    "Johas Camello",
-    "Lloyd Propia",
-    "Mark Ycong",
+// Agent Shift Schedules (MNL TIME)
+const AGENT_TIMES = {
+    // 6PM - 3AM
+    "Christian Antatico": "6PM - 3AM",
+    "Janevic Alolor": "6PM - 3AM",
+    "Marymay Musa": "6PM - 3AM",
+    "Hannah Mautad": "6PM - 3AM",
+    "John Turugan": "6PM - 3AM",
+    "Ausie Delima": "6PM - 3AM",
+
+    // 8PM - 5AM
+    "Miguel Angelo Geolina": "8PM - 5AM",
+    "Lloyd Propia": "8PM - 5AM",
+    "Kiffe Belenson": "8PM - 5AM",
+    "Jeussane Demoral": "8PM - 5AM",
+    "Jasmine Ceballos": "8PM - 5AM",
+    "Johas Camello": "8PM - 5AM",
+    "Laurence James Quistadio": "8PM - 5AM",
+    "Shem Justiniani": "8PM - 5AM",
+    "Honey Claire Tanutan": "8PM - 5AM",
+    "Harold Makiling": "8PM - 5AM",
+
+    // 10PM - 7AM
+    "Aljel Damalerio": "10PM - 7AM",
+    "Irene Simbajon": "10PM - 7AM",
+    "Gabrielle Abajero": "10PM - 7AM",
+    "Genevev Bantilan": "10PM - 7AM",
+    "Russeljan Nguho": "10PM - 7AM",
+    "Jenschelle Eslais": "10PM - 7AM",
+    "Jeniel Ople": "10PM - 7AM",
+    "Maria Sale": "10PM - 7AM",
+    "Daniela Jane Sulelom": "10PM - 7AM",
+    "Daisy Beronilla": "10PM - 7AM",
+    "Shaira Castillo": "10PM - 7AM",
+    "Renzelkenn Bueno": "10PM - 7AM",
+    "Erica Goloran": "10PM - 7AM",
+    "Jamaica Rosales": "10PM - 7AM",
+    "Rheamae Buscano": "10PM - 7AM",
+    "Saimor Panganiban": "10PM - 7AM",
+
+    // 12AM - 9AM
+    "Siti Quituar": "12AM - 9AM",
+    "Hazel Versuela": "12AM - 9AM",
+    "Jovir Domingo": "12AM - 9AM",
+    "Jevelyn Jamero": "12AM - 9AM",
+    "Chaira Wata": "12AM - 9AM",
+    "Donna Cristobal": "12AM - 9AM",
+
+    // 2AM - 11AM
+    "Kate Maglasang": "2AM - 11AM",
+    "Mark Ycong": "2AM - 11AM",
+    "Jenamie Sagetarios": "2AM - 11AM",
+    "Melvin De Jesus": "2AM - 11AM",
+    "Eron Casuyac": "2AM - 11AM"
+};
+
+// Master Chronological Order (6PM -> 8PM -> 10PM -> 12AM -> 2AM)
+const MASTER_SHIFT_ORDER = [
+    // 6PM - 3AM
+    "Christian Antatico",
+    "Janevic Alolor",
+    "Marymay Musa",
+    "Hannah Mautad",
+    "John Turugan",
+    "Ausie Delima",
+
+    // 8PM - 5AM
     "Miguel Angelo Geolina",
-    "Saimor Panganiban",
-    "Jeniel Ople",
-    "Siti Quituar",
-    "Jovir Domingo",
-    "Honey Claire Tanutan",
-    "Jenamie Sagetarios",
-    "Irene Simbajon",
-    "Aljel Damalerio",
-    "Jevelyn Jamero",
-    "Justine Parilla",
-    "Elvie Estellore",
-    "Ivy Algoso",
+    "Lloyd Propia",
     "Kiffe Belenson",
-    "Shem Justiniani",
     "Jeussane Demoral",
+    "Jasmine Ceballos",
+    "Johas Camello",
+    "Laurence James Quistadio",
+    "Shem Justiniani",
+    "Honey Claire Tanutan",
+    "Harold Makiling",
+
+    // 10PM - 7AM
+    "Aljel Damalerio",
+    "Irene Simbajon",
     "Gabrielle Abajero",
     "Genevev Bantilan",
     "Russeljan Nguho",
+    "Jenschelle Eslais",
+    "Jeniel Ople",
+    "Maria Sale",
+    "Daniela Jane Sulelom",
+    "Daisy Beronilla",
     "Shaira Castillo",
-    "Harold Makiling",
     "Renzelkenn Bueno",
-    "Laurence James Quistadio",
-    "John Turugan",
-    "Marymay Musa",
     "Erica Goloran",
-    "Ausie Delima",
-    "Christian Antatico",
-    "Janevic Alolor",
-    "Rheamae Buscano",
     "Jamaica Rosales",
-    "Hannah Mautad"
+    "Rheamae Buscano",
+    "Saimor Panganiban",
+
+    // 12AM - 9AM
+    "Siti Quituar",
+    "Hazel Versuela",
+    "Jovir Domingo",
+    "Jevelyn Jamero",
+    "Chaira Wata",
+    "Donna Cristobal",
+
+    // 2AM - 11AM
+    "Kate Maglasang",
+    "Mark Ycong",
+    "Jenamie Sagetarios",
+    "Melvin De Jesus",
+    "Eron Casuyac"
+];
+
+const ROSTER = [
+    ...MASTER_SHIFT_ORDER,
+    "Justine Parilla",
+    "Ivy Algoso",
+    "Elvie Estellore"
 ];
 
 const SECONDARY_AGENTS = [
@@ -512,109 +616,91 @@ const SECONDARY_AGENTS = [
     "Elvie Estellore"
 ];
 
-// Live Agents Grouping
+// Live Agents Grouping (Organized chronologically 10PM -> 12AM -> 2AM)
 const LIVE_AGENTS = [
-    "Chaira Wata",
-    "Donna Cristobal",
-    "Eron Casuyac",
-    "Hazel Versuela",
-    "Jovir Domingo",
-    "Jenamie Sagetarios",
-    "Jevelyn Jamero",
-    "Kate Maglasang",
-    "Mark Ycong",
-    "Siti Quituar",
-    "Melvin De Jesus",
-    "Saimor Panganiban"
-];
-
-// Fri - Sat Specific Ordering
-const FRI_SAT_AGENTS = [
-    "Hazel Versuela",
-    "Donna Cristobal",
     "Saimor Panganiban",
-    "Aljel Damalerio",
-    "Jenschelle Eslais",
-    "Kate Maglasang",
-    "Jevelyn Jamero",
-    "Irene Simbajon",
-    "Jovir Domingo",
-    "Mark Ycong",
     "Siti Quituar",
-    "Eron Casuyac",
-    "Kiffe Belenson",
-    "Jeussane Demoral",
-    "Gabrielle Abajero",
-    "Genevev Bantilan",
-    "Russeljan Nguho",
-    "Marymay Musa",
-    "Christian Antatico",
-    "Janevic Alolor",
-    "Hannah Mautad",
-    "Laurence James Quistadio"
-];
-
-// Sun - Mon Specific Ordering
-const SUN_MON_AGENTS = [
-    "Maria Sale",
-    "Melvin De Jesus",
-    "Daisy Beronilla",
+    "Hazel Versuela",
+    "Jovir Domingo",
+    "Jevelyn Jamero",
     "Chaira Wata",
-    "Lloyd Propia",
-    "Miguel Angelo Geolina",
-    "Jasmine Ceballos",
-    "Jeniel Ople",
-    "Johas Camello",
-    "Honey Claire Tanutan",
+    "Donna Cristobal",
+    "Kate Maglasang",
+    "Mark Ycong",
     "Jenamie Sagetarios",
-    "Daniela Jane Sulelom",
-    "Shem Justiniani",
-    "Shaira Castillo",
-    "Harold Makiling",
-    "Renzelkenn Bueno",
-    "John Turugan",
-    "Erica Goloran",
-    "Ausie Delima",
-    "Rheamae Buscano",
-    "Jamaica Rosales"
+    "Melvin De Jesus",
+    "Eron Casuyac"
 ];
 
-// Master CSR 1 Default Order (Excluding Live Agents and Secondary Agents)
-const ALL_CSR1_ORDER = [
-    "Jasmine Ceballos",
-    "Jenschelle Eslais",
-    "Maria Sale",
-    "Daniela Jane Sulelom",
-    "Daisy Beronilla",
-    "Johas Camello",
-    "Lloyd Propia",
-    "Miguel Angelo Geolina",
-    "Jeniel Ople",
-    "Honey Claire Tanutan",
-    "Irene Simbajon",
-    "Aljel Damalerio",
+// Fri - Sat Specific Ordering (Organized chronologically 6PM -> 8PM -> 10PM -> 12AM -> 2AM)
+const FRI_SAT_AGENTS = [
+    "Christian Antatico",
+    "Janevic Alolor",
+    "Marymay Musa",
+    "Hannah Mautad",
     "Kiffe Belenson",
-    "Shem Justiniani",
     "Jeussane Demoral",
+    "Laurence James Quistadio",
+    "Aljel Damalerio",
+    "Irene Simbajon",
     "Gabrielle Abajero",
     "Genevev Bantilan",
     "Russeljan Nguho",
-    "Shaira Castillo",
-    "Harold Makiling",
-    "Renzelkenn Bueno",
-    "Laurence James Quistadio",
-    "John Turugan",
-    "Marymay Musa",
-    "Erica Goloran",
-    "Ausie Delima",
-    "Christian Antatico",
-    "Janevic Alolor",
-    "Rheamae Buscano",
-    "Jamaica Rosales",
-    "Hannah Mautad"
+    "Jenschelle Eslais",
+    "Saimor Panganiban",
+    "Siti Quituar",
+    "Hazel Versuela",
+    "Jovir Domingo",
+    "Jevelyn Jamero",
+    "Donna Cristobal",
+    "Kate Maglasang",
+    "Mark Ycong",
+    "Eron Casuyac"
 ];
+
+// Sun - Mon Specific Ordering (Organized chronologically 6PM -> 8PM -> 10PM -> 12AM -> 2AM)
+const SUN_MON_AGENTS = [
+    "John Turugan",
+    "Ausie Delima",
+    "Miguel Angelo Geolina",
+    "Lloyd Propia",
+    "Jasmine Ceballos",
+    "Johas Camello",
+    "Shem Justiniani",
+    "Honey Claire Tanutan",
+    "Harold Makiling",
+    "Jeniel Ople",
+    "Maria Sale",
+    "Daniela Jane Sulelom",
+    "Daisy Beronilla",
+    "Shaira Castillo",
+    "Renzelkenn Bueno",
+    "Erica Goloran",
+    "Jamaica Rosales",
+    "Rheamae Buscano",
+    "Chaira Wata",
+    "Jenamie Sagetarios",
+    "Melvin De Jesus"
+];
+
+// Master CSR 1 Default Order (6PM -> 8PM -> 10PM, Excluding Live Agents and Secondary Agents)
+const ALL_CSR1_ORDER = MASTER_SHIFT_ORDER.filter(
+    agent => !LIVE_AGENTS.includes(agent) && !SECONDARY_AGENTS.includes(agent)
+);
 
 const EXCLUDED = []; 
+
+function sortByShiftTime(a, b) {
+    let indexA = MASTER_SHIFT_ORDER.indexOf(a.agent);
+    let indexB = MASTER_SHIFT_ORDER.indexOf(b.agent);
+
+    if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+    }
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return b.disp - a.disp;
+}
 
 function removeCSR1Agent(agentName) {
     excludedCSR1Agents.add(agentName);
@@ -925,7 +1011,18 @@ async function processCSVs() {
             if (slaList[0].minutes <= 60) isUrgent = true;
         }
 
-        return { agent, open, cool, disp, agentsTicket, needed, slaSummary, isUrgent, totalProcessed };
+        return {
+            agent,
+            shiftTime: AGENT_TIMES[agent] || "",
+            open,
+            cool,
+            disp,
+            agentsTicket,
+            needed,
+            slaSummary,
+            isUrgent,
+            totalProcessed
+        };
     });
 
     renderViews(lastResults);
@@ -950,43 +1047,19 @@ function getSortedPrimaryAgents(data, filterType) {
 
     if (filterType === 'liveagents') {
         primaryData = primaryData.filter(r => LIVE_AGENTS.includes(r.agent));
-        return primaryData.sort((a, b) => {
-            return LIVE_AGENTS.indexOf(a.agent) - LIVE_AGENTS.indexOf(b.agent);
-        });
     } else if (filterType === 'otheragents') {
         primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent));
-        return primaryData.sort((a, b) => {
-            let indexA = ALL_CSR1_ORDER.indexOf(a.agent);
-            let indexB = ALL_CSR1_ORDER.indexOf(b.agent);
-
-            if (indexA !== -1 && indexB !== -1) {
-                return indexA - indexB;
-            }
-            return b.disp - a.disp;
-        });
     } else if (filterType === 'frisat') {
         primaryData = primaryData.filter(r => FRI_SAT_AGENTS.includes(r.agent));
-        return primaryData.sort((a, b) => {
-            return FRI_SAT_AGENTS.indexOf(a.agent) - FRI_SAT_AGENTS.indexOf(b.agent);
-        });
     } else if (filterType === 'sunmon') {
         primaryData = primaryData.filter(r => SUN_MON_AGENTS.includes(r.agent));
-        return primaryData.sort((a, b) => {
-            return SUN_MON_AGENTS.indexOf(a.agent) - SUN_MON_AGENTS.indexOf(b.agent);
-        });
     } else {
         // 'all' filter: Exclude LIVE_AGENTS from All CSR 1
         primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent));
-        return primaryData.sort((a, b) => {
-            let indexA = ALL_CSR1_ORDER.indexOf(a.agent);
-            let indexB = ALL_CSR1_ORDER.indexOf(b.agent);
-
-            if (indexA !== -1 && indexB !== -1) {
-                return indexA - indexB;
-            }
-            return b.disp - a.disp;
-        });
     }
+
+    // Always organize chronologically by shift time (6PM -> 8PM -> 10PM -> 12AM -> 2AM)
+    return primaryData.sort(sortByShiftTime);
 }
 
 /* RANDOMIZED EXPORT FOR TAMPERMONKEY QUEUE */
@@ -1138,8 +1211,17 @@ function generateTableHTML(dataList, tableId, isCSR1 = false) {
             ? '<button data-html2canvas-ignore="true" class="btn-remove-agent" onclick="removeCSR1Agent(\'' + r.agent.replace(/'/g, "\\'") + '\')" title="Remove agent (Absent/Leave)">✕</button>' 
             : '';
 
+        let shiftTag = r.shiftTime 
+            ? '<span class="shift-badge">' + r.shiftTime + '</span>' 
+            : '';
+
         html += '<tr>' +
-            '<td class="text-left">' + removeBtn + r.agent + '</td>' +
+            '<td class="text-left">' +
+                '<div class="assignee-cell">' +
+                    '<div class="assignee-left">' + removeBtn + '<span>' + r.agent + '</span></div>' +
+                    shiftTag +
+                '</div>' +
+            '</td>' +
             '<td>' + r.open + '</td>' +
             '<td>' + r.cool + '</td>' +
             '<td><b>' + r.disp + '</b></td>' +
@@ -1172,10 +1254,17 @@ function generateCardViewHTML(dataList, gridId, isCSR1 = false) {
             ? '<button data-html2canvas-ignore="true" class="btn-card-remove" onclick="removeCSR1Agent(\'' + r.agent.replace(/'/g, "\\'") + '\')" title="Remove agent (Absent/Leave)">✕ Absent</button>' 
             : '';
 
+        let shiftTag = r.shiftTime 
+            ? '<span class="shift-badge">' + r.shiftTime + '</span>' 
+            : '';
+
         html += '' +
         '<div class="agent-card" id="' + cardId + '">' +
             '<div class="card-header">' +
-                '<h3 class="agent-name">' + r.agent + '</h3>' +
+                '<div class="card-title-group">' +
+                    '<h3 class="agent-name">' + r.agent + '</h3>' +
+                    shiftTag +
+                '</div>' +
                 '<div style="display:flex; gap:4px; align-items:center;">' +
                     removeCardBtn +
                     '<button class="btn-card-copy" onclick="copySingleCardImage(this, \'' + cardId + '\')">📷 Copy</button>' +
