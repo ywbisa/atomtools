@@ -1086,7 +1086,7 @@ function exportForTampermonkey() {
     URL.revokeObjectURL(url);
 }
 
-/* COPY ONLY THE TABLE / GRID ELEMENT ITSELF (EXCLUDES TITLES & CSR 2) */
+/* COPY ONLY THE TABLE / GRID ELEMENT ITSELF (EXCLUDES TITLES, CSR 2, & NEEDED TICKETS) */
 async function copyViewImageToClipboard() {
     const btn = document.getElementById('copyImgBtnMain');
     
@@ -1107,7 +1107,12 @@ async function copyViewImageToClipboard() {
             scale: 2,
             backgroundColor: currentViewMode === 'list' ? '#ffffff' : '#0a0a0a',
             logging: false,
-            useCORS: true
+            useCORS: true,
+            onclone: (clonedDoc) => {
+                clonedDoc.querySelectorAll('.needed-col, .needed-stat').forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
         });
 
         canvas.toBlob(async (blob) => {
@@ -1135,7 +1140,7 @@ async function copyViewImageToClipboard() {
     }
 }
 
-/* COPY INDIVIDUAL AGENT CARD TO CLIPBOARD */
+/* COPY INDIVIDUAL AGENT CARD TO CLIPBOARD (EXCLUDES NEEDED TICKETS) */
 async function copySingleCardImage(btnElement, cardId) {
     const card = document.getElementById(cardId);
     if (!card) return;
@@ -1151,7 +1156,12 @@ async function copySingleCardImage(btnElement, cardId) {
             scale: 2,
             backgroundColor: '#ffffff',
             logging: false,
-            useCORS: true
+            useCORS: true,
+            onclone: (clonedDoc) => {
+                clonedDoc.querySelectorAll('.needed-col, .needed-stat').forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
         });
 
         btnElement.style.display = 'inline-block';
@@ -1192,7 +1202,7 @@ function generateTableHTML(dataList, tableId, isCSR1 = false) {
                 '<th>Cool Off Tickets</th>' +
                 '<th>Total Tickets Disputed</th>' +
                 '<th>Agents Ticket</th>' +
-                '<th>Needed Tickets</th>' +
+                '<th class="needed-col">Needed Tickets</th>' +
                 '<th>SLA</th>' +
             '</tr>' +
         '</thead>' +
@@ -1226,7 +1236,7 @@ function generateTableHTML(dataList, tableId, isCSR1 = false) {
             '<td>' + r.cool + '</td>' +
             '<td><b>' + r.disp + '</b></td>' +
             '<td><b>' + agentsTicket + '</b></td>' +
-            '<td><span style="color:' + neededColor + '; font-weight:bold;">' + r.needed + '</span></td>' +
+            '<td class="needed-col"><span style="color:' + neededColor + '; font-weight:bold;">' + r.needed + '</span></td>' +
             '<td>' + slaHtml + '</td>' +
         '</tr>';
     });
@@ -1287,7 +1297,7 @@ function generateCardViewHTML(dataList, gridId, isCSR1 = false) {
                     '<span class="stat-label">Agents Ticket</span>' +
                     '<span class="stat-value">' + agentsTicket + '</span>' +
                 '</div>' +
-                '<div class="stat-item" style="grid-column: span 2;">' +
+                '<div class="stat-item needed-stat" style="grid-column: span 2;">' +
                     '<span class="stat-label">Needed</span>' +
                     '<span class="stat-value" style="color: ' + neededColor + ';">' + r.needed + '</span>' +
                 '</div>' +
