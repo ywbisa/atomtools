@@ -125,16 +125,16 @@
 
         /* DROP ZONE */
         .drop-zone {
-            border: 1px dashed var(--border-color);
+            border: 1.5px dashed var(--border-color);
             border-radius: 6px;
-            padding: 10px;
+            padding: 12px;
             text-align: center;
             background-color: #0b0f19;
             color: var(--text-muted);
             cursor: pointer;
             transition: all 0.2s ease;
             font-size: 12px;
-            height: 38px;
+            min-height: 52px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -162,7 +162,7 @@
             font-size: 12px;
             font-weight: 600;
             outline: none;
-            height: 38px;
+            height: 52px;
             width: 90px;
         }
 
@@ -179,7 +179,7 @@
             cursor: pointer;
             font-weight: 700;
             font-size: 11px;
-            height: 38px;
+            height: 52px;
             transition: opacity 0.2s ease;
             white-space: nowrap;
             text-transform: uppercase;
@@ -447,13 +447,13 @@
     </div>
 
     <!-- MAIN DASHBOARD CARD -->
-    <div class="card">
+    <div class="card" id="mainCard">
         <div class="input-grid">
             <div class="form-group">
                 <label>1. Upload Record CSV File</label>
                 <div class="drop-zone" id="dropZone">
                     <span id="dropZoneText">📂 <strong>Drag & drop CSV file here</strong> or <span style="color: var(--brand-beige); text-decoration: underline;">click to browse</span></span>
-                    <input type="file" id="fileInput" accept=".csv">
+                    <input type="file" id="fileInput" accept=".csv,text/csv">
                 </div>
             </div>
             <div class="form-group">
@@ -542,39 +542,71 @@
         let sortAsc = true;
 
         const dropZone = document.getElementById('dropZone');
+        const mainCard = document.getElementById('mainCard');
         const fileInput = document.getElementById('fileInput');
         const filterDayInput = document.getElementById('filterDay');
 
-        // --- BULLETPROOF DRAG AND DROP ---
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
+        // --- RELIABLE DRAG AND DROP (WINDOW + DROPZONE) ---
+        function extractDroppedFile(dataTransfer) {
+            if (!dataTransfer) return null;
+            if (dataTransfer.files && dataTransfer.files.length > 0) {
+                return dataTransfer.files[0];
+            }
+            if (dataTransfer.items && dataTransfer.items.length > 0) {
+                for (let i = 0; i < dataTransfer.items.length; i++) {
+                    if (dataTransfer.items[i].kind === 'file') {
+                        const file = dataTransfer.items[i].getAsFile();
+                        if (file) return file;
+                    }
+                }
+            }
+            return null;
         }
 
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
-        });
+        function handleFileDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
-        });
+            const file = extractDroppedFile(e.dataTransfer);
+            if (!file) return;
 
-        dropZone.addEventListener('drop', (e) => {
-            let dt = e.dataTransfer;
-            let files = dt.files;
-            if (files.length > 0) {
-                fileInput.files = files; 
-                processFile(files[0]);
+            try {
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                }
+            } catch (err) {
+                // Ignore read-only FileList assignment restrictions in strict browsers
             }
-        }, false);
 
-        dropZone.addEventListener('click', () => fileInput.click());
+            processFile(file);
+        }
+
+        window.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+            dropZone.classList.add('dragover');
+        });
+
+        window.addEventListener('dragleave', (e) => {
+            if (e.relatedTarget === null || e.clientX === 0 && e.clientY === 0) {
+                dropZone.classList.remove('dragover');
+            }
+        });
+
+        window.addEventListener('drop', handleFileDrop);
+        mainCard.addEventListener('drop', handleFileDrop);
+        dropZone.addEventListener('drop', handleFileDrop);
+
+        dropZone.addEventListener('click', () => {
+            fileInput.value = '';
+            fileInput.click();
+        });
+
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) processFile(e.target.files[0]);
+            if (e.target.files && e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
         });
 
         filterDayInput.addEventListener('keyup', (e) => {
