@@ -42,7 +42,7 @@
         /* BRAND HEADER */
         .brand-header {
             width: 100%;
-            max-width: 1150px;
+            max-width: 1200px;
             margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
@@ -90,7 +90,7 @@
             border-radius: 8px; 
             border: 1px solid var(--border-color);
             width: 100%;
-            max-width: 1150px; 
+            max-width: 1200px; 
             margin-bottom: 15px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         }
@@ -196,7 +196,7 @@
             gap: 12px; 
             margin-bottom: 15px; 
             width: 100%;
-            max-width: 1150px;
+            max-width: 1200px;
         }
 
         .metric-card { 
@@ -244,7 +244,7 @@
             border-radius: 4px; 
             background-color: #0b0f19;
             color: var(--text-main);
-            width: 320px; 
+            width: 340px; 
             outline: none; 
         }
 
@@ -375,10 +375,20 @@
             font-weight: 500;
         }
 
+        .reason-valid {
+            color: var(--accent-green) !important;
+            font-weight: 500;
+        }
+
         .reason-missing {
             color: var(--accent-red) !important;
             font-weight: 700;
             font-style: italic;
+        }
+
+        .subtotal-valid {
+            color: var(--text-muted) !important;
+            font-weight: 600;
         }
 
         /* BADGES */
@@ -471,7 +481,7 @@
         </div>
 
         <div class="controls" id="controls">
-            <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search Ticket ID, Agent Name, or Reason...">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search Ticket ID, Agent Name, Reason, or Subtotal...">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <button class="btn-copy" id="copyBtn" onclick="copyToGChat()">📋 Copy to GChat</button>
                 <button class="btn-sheets" id="copySheetsBtn" onclick="copyToSheets()">📊 Copy to Sheets</button>
@@ -488,7 +498,8 @@
                         <th class="agent-col" onclick="sortTable(1)">Agent Name (Assignee) ↕</th>
                         <th onclick="sortTable(2)">Ticket Status ↕</th>
                         <th class="reason-col" onclick="sortTable(3)">Unsuccessful Reason (Call) ↕</th>
-                        <th onclick="sortTable(4)">Solved / Timestamp ↕</th>
+                        <th onclick="sortTable(4)">Order Subtotal ↕</th>
+                        <th onclick="sortTable(5)">Solved / Timestamp ↕</th>
                         <th style="width: 70px;">Action</th>
                     </tr>
                 </thead>
@@ -572,7 +583,7 @@
 
         function processFile(file) {
             loadedFileName = file.name;
-            document.getElementById('dropZoneText').innerHTML = `Loaded: <strong>${file.name}</strong>`;
+            document.getElementById('dropZoneText').innerHTML = `Loaded: <strong>${escapeHtml(file.name)}</strong>`;
             const reader = new FileReader();
 
             reader.onload = function(e) {
@@ -645,6 +656,33 @@
             });
         }
 
+        // ORDER SUBTOTAL VALIDATION HELPER
+        function evaluateOrderSubtotal(subtotalStr, isSuccessfulStatus) {
+            const clean = (subtotalStr || '').replace(/^:\s*/, '').trim();
+            const isBlank = (!clean || clean === "'-" || clean === "-" || clean.toLowerCase() === 'nan' || clean.toLowerCase() === 'null');
+
+            if (isBlank) {
+                return isSuccessfulStatus
+                    ? { text: '[MISSING SUBTOTAL]', isError: true }
+                    : { text: '-', isError: false };
+            }
+
+            const numMatch = clean.match(/-?\d+(\.\d+)?/);
+            const numVal = numMatch ? parseFloat(numMatch[0]) : NaN;
+
+            if (isSuccessfulStatus) {
+                if (isNaN(numVal)) {
+                    return { text: '[MISSING SUBTOTAL]', isError: true };
+                }
+                if (numVal <= 0) {
+                    return { text: '[ZERO / MISSING SUBTOTAL]', isError: true };
+                }
+                return { text: clean, isError: false };
+            }
+
+            return { text: clean, isError: false };
+        }
+
         function parseCSVLine(text) {
             const result = [];
             let cell = '';
@@ -673,12 +711,13 @@
             }
 
             const targetDayVal = filterDayInput.value ? parseInt(filterDayInput.value, 10) : null;
-            const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"\$/g, '').toLowerCase());
+            const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, '').toLowerCase());
             
             let idIdx = headers.findIndex(h => h === 'id' || h.includes('ticket id'));
             let assigneeIdx = headers.findIndex(h => h.includes('assignee') && !h.includes('updated'));
             let statusIdx = headers.findIndex(h => h.includes('status') && !h.includes('updated'));
             let reasonIdx = headers.findIndex(h => h.includes('unsuccessful reason') || h.includes('reason'));
+            let subtotalIdx = headers.findIndex(h => h.includes('order subtotal') || h.includes('subtotal'));
 
             let solvedIdx = headers.findIndex(h => h === 'solved' || h.includes('solved'));
             let dateIndices = [];
@@ -696,14 +735,14 @@
             if (idIdx === -1) idIdx = 0;
             if (statusIdx === -1) statusIdx = 1;
             if (assigneeIdx === -1) assigneeIdx = 2;
-            if (reasonIdx === -1) reasonIdx = 9;
+            if (reasonIdx === -1) reasonIdx = 6;
 
             rawDataset = [];
             hiddenTicketIds.clear();
             const affectedAgents = new Set();
 
             for (let i = 1; i < lines.length; i++) {
-                const cols = parseCSVLine(lines[i]).map(c => c.replace(/^"|"\$/g, ''));
+                const cols = parseCSVLine(lines[i]).map(c => c.replace(/^"|"$/g, ''));
                 if (cols.length <= Math.max(idIdx, assigneeIdx, statusIdx, reasonIdx)) continue;
 
                 const ticketId = cols[idIdx] || 'N/A';
@@ -716,63 +755,80 @@
 
                 const status = (cols[statusIdx] || '').trim();
                 const reason = (cols[reasonIdx] || '').trim();
+                const rawSubtotal = (subtotalIdx !== -1 && subtotalIdx < cols.length) ? (cols[subtotalIdx] || '').trim() : '';
+
                 const reasonLower = reason.toLowerCase();
                 const statusLower = status.toLowerCase();
 
-                // EVALUATE UPDATED MIS-TAGGING RULES:
+                // EVALUATE MIS-TAGGING RULES:
                 let isMisTagged = false;
+                let isReasonError = false;
                 let formattedReason = reason;
                 const isBlank = (!reason || reason === "'-" || reason === "-" || reasonLower === 'nan' || reasonLower === 'null' || reason.trim() === '');
                 const isCancellationReason = reasonLower.includes('cancelled') || reasonLower.includes('canceled');
 
+                let subtotalCheck = { text: rawSubtotal || '-', isError: false };
+
                 // 1. Status: Expired
-                // Expired + Outside of Dispute Window is valid
                 if (statusLower.includes('expired')) {
+                    subtotalCheck = evaluateOrderSubtotal(rawSubtotal, false);
                     if (isBlank) {
                         isMisTagged = true;
+                        isReasonError = true;
                         formattedReason = '[BLANK / MISSING REASON]';
                     } else if (reasonLower.includes('outside of dispute window')) {
                         isMisTagged = false; // Valid
                     } else if (reasonLower.includes('order successful') || isCancellationReason) {
                         isMisTagged = true;
+                        isReasonError = true;
                     }
                 }
                 // 2. Status: Already Refunded
-                // Valid reasons: 'Order Successful', 'Cancelled Order', 'Cancelled by Merchant' (or any cancellation reason)
                 else if (statusLower.includes('already refunded') || statusLower.includes('refunded')) {
+                    subtotalCheck = evaluateOrderSubtotal(rawSubtotal, false);
                     if (isBlank) {
                         isMisTagged = true;
+                        isReasonError = true;
                         formattedReason = '[BLANK / MISSING REASON]';
                     } else if (!reasonLower.includes('order successful') && !isCancellationReason) {
                         isMisTagged = true;
+                        isReasonError = true;
                     }
                 } 
-                // 3. Status: Successful
-                // Must have 'Order Successful'
+                // 3. Status: Successful (Must have 'Order Successful' AND a valid Order Subtotal > 0)
                 else if (statusLower.includes('successful') && !statusLower.includes('unsuccessful')) {
                     if (isBlank) {
                         isMisTagged = true;
+                        isReasonError = true;
                         formattedReason = '[BLANK / MISSING REASON]';
                     } else if (!reasonLower.includes('order successful')) {
+                        isMisTagged = true;
+                        isReasonError = true;
+                    }
+
+                    subtotalCheck = evaluateOrderSubtotal(rawSubtotal, true);
+                    if (subtotalCheck.isError) {
                         isMisTagged = true;
                     }
                 } 
                 // 4. Status: Unsuccessful
-                // Must have dispute threshold or other valid dispute reasons (not blank, not order successful, not cancelled)
                 else if (statusLower.includes('unsuccessful')) {
+                    subtotalCheck = evaluateOrderSubtotal(rawSubtotal, false);
                     if (isBlank) {
                         isMisTagged = true;
+                        isReasonError = true;
                         formattedReason = '[BLANK / MISSING REASON]';
                     } else if (reasonLower.includes('order successful') || isCancellationReason) {
                         isMisTagged = true;
+                        isReasonError = true;
                     }
                 } 
                 // 5. Fallback for other status mismatches
                 else {
-                    if (isCancellationReason) {
+                    subtotalCheck = evaluateOrderSubtotal(rawSubtotal, false);
+                    if (isCancellationReason || reasonLower.includes('dispute threshold')) {
                         isMisTagged = true;
-                    } else if (reasonLower.includes('dispute threshold')) {
-                        isMisTagged = true;
+                        isReasonError = true;
                     }
                 }
 
@@ -811,6 +867,9 @@
                     assignee: assignee,
                     currentStatus: status,
                     reason: formattedReason,
+                    isReasonError: isReasonError,
+                    orderSubtotal: subtotalCheck.text,
+                    isSubtotalError: subtotalCheck.isError,
                     timestamp: recordTimestamp
                 });
             }
@@ -834,14 +893,28 @@
                 !hiddenTicketIds.has(item.id) && (
                     item.id.toLowerCase().includes(query) ||
                     item.assignee.toLowerCase().includes(query) ||
+                    item.currentStatus.toLowerCase().includes(query) ||
                     item.reason.toLowerCase().includes(query) ||
+                    item.orderSubtotal.toLowerCase().includes(query) ||
                     item.timestamp.toLowerCase().includes(query)
                 )
             );
             
+            const sortKeys = ['id', 'assignee', 'currentStatus', 'reason', 'orderSubtotal', 'timestamp'];
+            const key = sortKeys[sortCol] || 'assignee';
+
             filteredDataset.sort((a, b) => {
-                let valA = Object.values(a)[sortCol];
-                let valB = Object.values(b)[sortCol];
+                let valA = a[key];
+                let valB = b[key];
+
+                if (key === 'orderSubtotal') {
+                    const numA = parseFloat(String(valA).replace(/[^0-9.-]/g, ''));
+                    const numB = parseFloat(String(valB).replace(/[^0-9.-]/g, ''));
+                    const validA = !isNaN(numA) && !a.isSubtotalError;
+                    const validB = !isNaN(numB) && !b.isSubtotalError;
+                    if (validA && validB) return sortAsc ? numA - numB : numB - numA;
+                    if (validA !== validB) return sortAsc ? (validA ? 1 : -1) : (validA ? -1 : 1);
+                }
 
                 if (typeof valA === 'string') {
                     return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -884,13 +957,18 @@
 
             filteredDataset.forEach(row => {
                 const tr = document.createElement('tr');
-                const isBlank = row.reason.includes('[BLANK');
+                const isBlankReason = row.reason.includes('[BLANK');
+                const reasonClass = !row.isReasonError
+                    ? 'reason-valid'
+                    : (isBlankReason ? 'reason-missing' : 'reason-col');
+                const subtotalClass = row.isSubtotalError ? 'reason-missing' : 'subtotal-valid';
 
                 tr.innerHTML = `
                     <td class="ticket-id">${escapeHtml(row.id)}</td>
                     <td class="agent-col">${escapeHtml(row.assignee)}</td>
                     <td><span class="badge">${escapeHtml(row.currentStatus)}</span></td>
-                    <td class="${isBlank ? 'reason-missing' : 'reason-col'}">${escapeHtml(row.reason)}</td>
+                    <td class="${reasonClass}">${escapeHtml(row.reason)}</td>
+                    <td class="${subtotalClass}">${escapeHtml(row.orderSubtotal)}</td>
                     <td style="color: var(--text-muted); font-size: 12px; font-weight: 600;">${escapeHtml(row.timestamp)}</td>
                     <td><button class="btn-hide" onclick="hideRow('${escapeHtml(row.id)}')">👁️ Hide</button></td>
                 `;
@@ -909,7 +987,12 @@
         }
 
         function escapeHtml(text) {
-            return text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
+            return String(text)
+                .replace(/&/g, "&")
+                .replace(/</g, "<")
+                .replace(/>/g, ">")
+                .replace(/"/g, """)
+                .replace(/'/g, "'");
         }
 
         // --- COPY TO GCHAT FUNCTIONALITY ---
@@ -919,24 +1002,25 @@
                 return;
             }
 
-            const headers = ["Ticket ID", "Agent Name", "Ticket Status", "Unsuccessful Reason"];
-            let widths = [headers[0].length, headers[1].length, headers[2].length, headers[3].length];
+            const headers = ["Ticket ID", "Agent Name", "Ticket Status", "Unsuccessful Reason", "Order Subtotal"];
+            let widths = [headers[0].length, headers[1].length, headers[2].length, headers[3].length, headers[4].length];
             
             filteredDataset.forEach(row => {
                 if (row.id.length > widths[0]) widths[0] = row.id.length;
                 if (row.assignee.length > widths[1]) widths[1] = row.assignee.length;
                 if (row.currentStatus.length > widths[2]) widths[2] = row.currentStatus.length;
                 if (row.reason.length > widths[3]) widths[3] = row.reason.length;
+                if (row.orderSubtotal.length > widths[4]) widths[4] = row.orderSubtotal.length;
             });
 
             const pad = (str, width) => str.padEnd(width, ' ');
 
             let lines = [];
-            lines.push(`${pad(headers[0], widths[0])} | ${pad(headers[1], widths[1])} | ${pad(headers[2], widths[2])} | ${pad(headers[3], widths[3])}`);
-            lines.push(`${'-'.repeat(widths[0])}-|-${'-'.repeat(widths[1])}-|-${'-'.repeat(widths[2])}-|-${'-'.repeat(widths[3])}`);
+            lines.push(`${pad(headers[0], widths[0])} | ${pad(headers[1], widths[1])} | ${pad(headers[2], widths[2])} | ${pad(headers[3], widths[3])} | ${pad(headers[4], widths[4])}`);
+            lines.push(`${'-'.repeat(widths[0])}-|-${'-'.repeat(widths[1])}-|-${'-'.repeat(widths[2])}-|-${'-'.repeat(widths[3])}-|-${'-'.repeat(widths[4])}`);
             
             filteredDataset.forEach(row => {
-                lines.push(`${pad(row.id, widths[0])} | ${pad(row.assignee, widths[1])} | ${pad(row.currentStatus, widths[2])} | ${pad(row.reason, widths[3])}`);
+                lines.push(`${pad(row.id, widths[0])} | ${pad(row.assignee, widths[1])} | ${pad(row.currentStatus, widths[2])} | ${pad(row.reason, widths[3])} | ${pad(row.orderSubtotal, widths[4])}`);
             });
 
             const textToCopy = "```\n" + lines.join('\n') + "\n```";
@@ -961,7 +1045,7 @@
 
             let lines = [];
             filteredDataset.forEach(row => {
-                lines.push([row.id, row.assignee, row.currentStatus, row.reason, row.timestamp].join('\t'));
+                lines.push([row.id, row.assignee, row.currentStatus, row.reason, row.orderSubtotal, row.timestamp].join('\t'));
             });
 
             const textToCopy = lines.join('\n');
