@@ -1008,32 +1008,64 @@
             return String(text).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
         }
 
-        // --- COPY TO GCHAT FUNCTIONALITY ---
+        // --- COMPACT COPY TO GCHAT FUNCTIONALITY (NO LINE-WRAPPING) ---
         function copyToGChat() {
             if (filteredDataset.length === 0) {
                 alert("No data to copy!");
                 return;
             }
 
-            const headers = ["Ticket ID", "Agent Name", "Ticket Status", "Unsuccessful Reason", "Order Subtotal"];
-            let widths = [headers[0].length, headers[1].length, headers[2].length, headers[3].length, headers[4].length];
-            
-            filteredDataset.forEach(row => {
-                if (row.id.length > widths[0]) widths[0] = row.id.length;
-                if (row.assignee.length > widths[1]) widths[1] = row.assignee.length;
-                if (row.currentStatus.length > widths[2]) widths[2] = row.currentStatus.length;
-                if (row.reason.length > widths[3]) widths[3] = row.reason.length;
-                if (row.orderSubtotal.length > widths[4]) widths[4] = row.orderSubtotal.length;
+            const headers = ["ID", "Agent", "Status", "Reason", "Sub"];
+            const compactRows = filteredDataset.map(row => {
+                // Compress agent name if longer than 18 chars (First + Last)
+                let agent = row.assignee.trim();
+                if (agent.length > 18) {
+                    const parts = agent.split(/\s+/);
+                    if (parts.length >= 2) {
+                        agent = `${parts[0]} ${parts[parts.length - 1]}`;
+                    }
+                }
+
+                // Compress status for narrow chat bubble
+                let status = row.currentStatus.trim();
+                if (status.toLowerCase() === 'already refunded') {
+                    status = 'Refunded';
+                }
+
+                // Compress reason for narrow chat bubble
+                let reason = row.reason.trim();
+                if (reason.includes('[BLANK')) {
+                    reason = '[Blank]';
+                } else if (reason.toLowerCase() === 'outside of dispute window') {
+                    reason = 'Outside Window';
+                }
+
+                // Compress subtotal for narrow chat bubble
+                let sub = row.orderSubtotal.trim();
+                if (sub.includes('ZERO')) {
+                    sub = '0 (Miss)';
+                } else if (sub.includes('MISSING SUBTOTAL')) {
+                    sub = 'Missing';
+                }
+
+                return [row.id, agent, status, reason, sub];
+            });
+
+            let widths = headers.map(h => h.length);
+            compactRows.forEach(cols => {
+                for (let i = 0; i < cols.length; i++) {
+                    if (cols[i].length > widths[i]) widths[i] = cols[i].length;
+                }
             });
 
             const pad = (str, width) => str.padEnd(width, ' ');
 
             let lines = [];
             lines.push(`${pad(headers[0], widths[0])} | ${pad(headers[1], widths[1])} | ${pad(headers[2], widths[2])} | ${pad(headers[3], widths[3])} | ${pad(headers[4], widths[4])}`);
-            lines.push(`${'-'.repeat(widths[0])}-|-${'-'.repeat(widths[1])}-|-${'-'.repeat(widths[2])}-|-${'-'.repeat(widths[3])}-|-${'-'.repeat(widths[4])}`);
+            lines.push(`${'-'.repeat(widths[0])}-+-${'-'.repeat(widths[1])}-+-${'-'.repeat(widths[2])}-+-${'-'.repeat(widths[3])}-+-${'-'.repeat(widths[4])}`);
             
-            filteredDataset.forEach(row => {
-                lines.push(`${pad(row.id, widths[0])} | ${pad(row.assignee, widths[1])} | ${pad(row.currentStatus, widths[2])} | ${pad(row.reason, widths[3])} | ${pad(row.orderSubtotal, widths[4])}`);
+            compactRows.forEach(cols => {
+                lines.push(`${pad(cols[0], widths[0])} | ${pad(cols[1], widths[1])} | ${pad(cols[2], widths[2])} | ${pad(cols[3], widths[3])} | ${pad(cols[4], widths[4])}`);
             });
 
             const textToCopy = "```\n" + lines.join('\n') + "\n```";
