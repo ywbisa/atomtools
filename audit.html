@@ -125,6 +125,7 @@
 
         /* DROP ZONE */
         .drop-zone {
+            position: relative;
             border: 1.5px dashed var(--border-color);
             border-radius: 6px;
             padding: 12px;
@@ -139,9 +140,10 @@
             align-items: center;
             justify-content: center;
             font-weight: 500;
+            overflow: hidden;
         }
 
-        .drop-zone * {
+        .drop-zone span {
             pointer-events: none;
         }
 
@@ -151,7 +153,16 @@
             color: var(--brand-beige);
         }
 
-        .drop-zone input[type="file"] { display: none; }
+        .drop-zone input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
 
         input[type="number"] {
             padding: 6px 10px;
@@ -447,13 +458,13 @@
     </div>
 
     <!-- MAIN DASHBOARD CARD -->
-    <div class="card" id="mainCard">
+    <div class="card">
         <div class="input-grid">
             <div class="form-group">
                 <label>1. Upload Record CSV File</label>
                 <div class="drop-zone" id="dropZone">
                     <span id="dropZoneText">📂 <strong>Drag & drop CSV file here</strong> or <span style="color: var(--brand-beige); text-decoration: underline;">click to browse</span></span>
-                    <input type="file" id="fileInput" accept=".csv,text/csv">
+                    <input type="file" id="fileInput" accept=".csv">
                 </div>
             </div>
             <div class="form-group">
@@ -540,67 +551,30 @@
         let loadedFileName = "";
         let sortCol = 1; // Default: Agent Name
         let sortAsc = true;
+        let lastProcessedTime = 0;
 
         const dropZone = document.getElementById('dropZone');
-        const mainCard = document.getElementById('mainCard');
         const fileInput = document.getElementById('fileInput');
         const filterDayInput = document.getElementById('filterDay');
 
-        // --- RELIABLE DRAG AND DROP (WINDOW + DROPZONE) ---
-        function extractDroppedFile(dataTransfer) {
-            if (!dataTransfer) return null;
-            if (dataTransfer.files && dataTransfer.files.length > 0) {
-                return dataTransfer.files[0];
-            }
-            if (dataTransfer.items && dataTransfer.items.length > 0) {
-                for (let i = 0; i < dataTransfer.items.length; i++) {
-                    if (dataTransfer.items[i].kind === 'file') {
-                        const file = dataTransfer.items[i].getAsFile();
-                        if (file) return file;
-                    }
-                }
-            }
-            return null;
-        }
-
-        function handleFileDrop(e) {
-            e.preventDefault();
-            e.stopPropagation();
+        // --- DRAG AND DROP (NATIVE FILE INPUT + PAGE-WIDE FALLBACK) ---
+        fileInput.addEventListener('dragenter', () => dropZone.classList.add('dragover'));
+        fileInput.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+        fileInput.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        fileInput.addEventListener('drop', (e) => {
             dropZone.classList.remove('dragover');
-
-            const file = extractDroppedFile(e.dataTransfer);
-            if (!file) return;
-
-            try {
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                    fileInput.files = e.dataTransfer.files;
-                }
-            } catch (err) {
-                // Ignore read-only FileList assignment restrictions in strict browsers
-            }
-
-            processFile(file);
-        }
-
-        window.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-            dropZone.classList.add('dragover');
-        });
-
-        window.addEventListener('dragleave', (e) => {
-            if (e.relatedTarget === null || e.clientX === 0 && e.clientY === 0) {
-                dropZone.classList.remove('dragover');
+            const droppedFile = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+            if (droppedFile) {
+                setTimeout(() => {
+                    if (Date.now() - lastProcessedTime >= 150) {
+                        processFile(droppedFile);
+                    }
+                }, 50);
             }
         });
 
-        window.addEventListener('drop', handleFileDrop);
-        mainCard.addEventListener('drop', handleFileDrop);
-        dropZone.addEventListener('drop', handleFileDrop);
-
-        dropZone.addEventListener('click', () => {
+        fileInput.addEventListener('click', () => {
             fileInput.value = '';
-            fileInput.click();
         });
 
         fileInput.addEventListener('change', (e) => {
@@ -609,11 +583,37 @@
             }
         });
 
+        // Prevent accidental browser download if dropped outside the drop zone
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.addEventListener(eventName, (e) => {
+                if (e.target === fileInput) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (eventName === 'dragenter' || eventName === 'dragover') {
+                    dropZone.classList.add('dragover');
+                } else if (eventName === 'dragleave') {
+                    dropZone.classList.remove('dragover');
+                } else if (eventName === 'drop') {
+                    dropZone.classList.remove('dragover');
+                    const files = e.dataTransfer && e.dataTransfer.files;
+                    if (files && files.length > 0) {
+                        processFile(files[0]);
+                    }
+                }
+            }, true);
+        });
+
         filterDayInput.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') processData();
         });
 
         function processFile(file) {
+            if (!file) return;
+            const now = Date.now();
+            if (now - lastProcessedTime < 150) return;
+            lastProcessedTime = now;
+
             loadedFileName = file.name;
             document.getElementById('dropZoneText').innerHTML = `Loaded: <strong>${escapeHtml(file.name)}</strong>`;
             const reader = new FileReader();
