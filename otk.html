@@ -603,8 +603,56 @@ const MASTER_SHIFT_ORDER = [
     "Eron Casuyac"
 ];
 
+// Seasonal Agents Grouping (Excluded from All CSR 1 and Other Agents)
+const SEASONAL_AGENTS = [
+    "Joshua Magno",
+    "Joel Ceasar Castillon",
+    "Joshua Estellore",
+    "Christian Rey Pascual",
+    "Wendylyn Balinon",
+    "Julie Ann Udang",
+    "Millena Rayjen Castillo",
+    "Kurt John Verallo",
+    "Kxye Althea Cumaling",
+    "Vincent Montellano",
+    "Bernadeth Bajenting",
+    "Marbie Selario",
+    "Mariah Amor Ecobiza",
+    "Jayson Remoroza",
+    "Michaela Mae Tiorosio",
+    "Farida Faye Briones",
+    "Resalie Nazareno",
+    "Alexan Nicole Quinanola",
+    "Larraine Manalo",
+    "Angeline Samarista",
+    "Lovelyn Mae Bejel",
+    "Edrilyn Wayne Matinagnos",
+    "Eva Marie Barsobia",
+    "Jeanine Marie Regala",
+    "Jhanelle Claire Dellomes",
+    "Charmaine Marie Alonzo",
+    "Kent Clarish Aubrey Labustro",
+    "Karen Lee Montuerto",
+    "Marione James Cabactulan",
+    "Kevin John Geromo",
+    "Cirilo John Baterna",
+    "Hazel Lusat",
+    "Rhean Nino Avila",
+    "Alunna Bompat",
+    "Clifford Jay Caliso",
+    "Bridget Sophia Sampan",
+    "Darah Faye Gelicana",
+    "Kenneth Anmar Plaza",
+    "Alex Joshua Schneider",
+    "Ashley Dondoy",
+    "Rhezijoy Sustino",
+    "Jeverson Patambag",
+    "Aires Liboon"
+];
+
 const ROSTER = [
     ...MASTER_SHIFT_ORDER,
+    ...SEASONAL_AGENTS,
     "Justine Parilla",
     "Ivy Algoso",
     "Elvie Estellore"
@@ -683,9 +731,9 @@ const SUN_MON_AGENTS = [
     "Melvin De Jesus"
 ];
 
-// Master CSR 1 Default Order (6PM -> 8PM -> 10PM, Excluding Live Agents and Secondary Agents)
+// Master CSR 1 Default Order (6PM -> 8PM -> 10PM, Excluding Live Agents, Seasonal Agents, and Secondary Agents)
 const ALL_CSR1_ORDER = MASTER_SHIFT_ORDER.filter(
-    agent => !LIVE_AGENTS.includes(agent) && !SECONDARY_AGENTS.includes(agent)
+    agent => !LIVE_AGENTS.includes(agent) && !SEASONAL_AGENTS.includes(agent) && !SECONDARY_AGENTS.includes(agent)
 );
 
 const EXCLUDED = []; 
@@ -1047,18 +1095,23 @@ function getSortedPrimaryAgents(data, filterType) {
 
     if (filterType === 'liveagents') {
         primaryData = primaryData.filter(r => LIVE_AGENTS.includes(r.agent));
+    } else if (filterType === 'seasonalagents') {
+        primaryData = primaryData.filter(r => SEASONAL_AGENTS.includes(r.agent));
+        return primaryData.sort((a, b) => {
+            return SEASONAL_AGENTS.indexOf(a.agent) - SEASONAL_AGENTS.indexOf(b.agent);
+        });
     } else if (filterType === 'otheragents') {
-        primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent));
+        primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent) && !SEASONAL_AGENTS.includes(r.agent));
     } else if (filterType === 'frisat') {
         primaryData = primaryData.filter(r => FRI_SAT_AGENTS.includes(r.agent));
     } else if (filterType === 'sunmon') {
         primaryData = primaryData.filter(r => SUN_MON_AGENTS.includes(r.agent));
     } else {
-        // 'all' filter: Exclude LIVE_AGENTS from All CSR 1
-        primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent));
+        // 'all' filter: Exclude LIVE_AGENTS and SEASONAL_AGENTS from All CSR 1
+        primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent) && !SEASONAL_AGENTS.includes(r.agent));
     }
 
-    // Always organize chronologically by shift time (6PM -> 8PM -> 10PM -> 12AM -> 2AM)
+    // Organize chronologically by shift time (6PM -> 8PM -> 10PM -> 12AM -> 2AM)
     return primaryData.sort(sortByShiftTime);
 }
 
@@ -1320,6 +1373,7 @@ function renderViews(data) {
     let html = '<div class="filter-container">' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'all' ? 'active' : '') + '" onclick="setScheduleFilter(\'all\')">All CSR 1</button>' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'liveagents' ? 'active' : '') + '" onclick="setScheduleFilter(\'liveagents\')">Live Agents</button>' +
+        '<button class="btn-filter ' + (currentScheduleFilter === 'seasonalagents' ? 'active' : '') + '" onclick="setScheduleFilter(\'seasonalagents\')">Seasonal Agents</button>' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'otheragents' ? 'active' : '') + '" onclick="setScheduleFilter(\'otheragents\')">Other Agents</button>' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'frisat' ? 'active' : '') + '" onclick="setScheduleFilter(\'frisat\')">Fri - Sat Agents</button>' +
         '<button class="btn-filter ' + (currentScheduleFilter === 'sunmon' ? 'active' : '') + '" onclick="setScheduleFilter(\'sunmon\')">Sun - Mon Agents</button>' +
@@ -1351,6 +1405,7 @@ function renderViews(data) {
 
     let groupTitle = "CSR 1 Agents";
     if (currentScheduleFilter === 'liveagents') groupTitle = "Live Agents";
+    if (currentScheduleFilter === 'seasonalagents') groupTitle = "Seasonal Agents";
     if (currentScheduleFilter === 'otheragents') groupTitle = "CSR 1 Agents (Other Agents)";
     if (currentScheduleFilter === 'frisat') groupTitle = "CSR 1 Agents (Fri - Sat Schedule)";
     if (currentScheduleFilter === 'sunmon') groupTitle = "CSR 1 Agents (Sun - Mon Schedule)";
