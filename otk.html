@@ -681,7 +681,7 @@ const LIVE_AGENTS = [
     "Eron Casuyac"
 ];
 
-// Fri - Sat Specific Ordering (Organized chronologically 6PM -> 8PM -> 10PM -> 12AM -> 2AM)
+// Fri - Sat Specific Ordering (Organized chronologically 6PM -> 8PM -> 10PM, Excluding Live Agents)
 const FRI_SAT_AGENTS = [
     "Christian Antatico",
     "Janevic Alolor",
@@ -698,19 +698,10 @@ const FRI_SAT_AGENTS = [
     "Gabrielle Abajero",
     "Genevev Bantilan",
     "Russeljan Nguho",
-    "Jenschelle Eslais",
-    "Saimor Panganiban",
-    "Siti Quituar",
-    "Hazel Versuela",
-    "Jovir Domingo",
-    "Jevelyn Jamero",
-    "Donna Cristobal",
-    "Kate Maglasang",
-    "Mark Ycong",
-    "Eron Casuyac"
+    "Jenschelle Eslais"
 ];
 
-// Sun - Mon Specific Ordering (Organized chronologically 6PM -> 8PM -> 10PM -> 12AM -> 2AM)
+// Sun - Mon Specific Ordering (Organized chronologically 6PM -> 8PM -> 10PM, Excluding Live Agents)
 const SUN_MON_AGENTS = [
     "John Turugan",
     "Miguel Angelo Geolina",
@@ -726,10 +717,7 @@ const SUN_MON_AGENTS = [
     "Renzelkenn Bueno",
     "Erica Goloran",
     "Jamaica Rosales",
-    "Rheamae Buscano",
-    "Chaira Wata",
-    "Jenamie Sagetarios",
-    "Melvin De Jesus"
+    "Rheamae Buscano"
 ];
 
 // Master CSR 1 Default Order (6PM -> 8PM -> 10PM, Excluding Live Agents, Seasonal Agents, and Secondary Agents)
@@ -1108,9 +1096,9 @@ function getSortedPrimaryAgents(data, filterType) {
     } else if (filterType === 'otheragents') {
         primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent) && !SEASONAL_AGENTS.includes(r.agent));
     } else if (filterType === 'frisat') {
-        primaryData = primaryData.filter(r => FRI_SAT_AGENTS.includes(r.agent));
+        primaryData = primaryData.filter(r => FRI_SAT_AGENTS.includes(r.agent) && !LIVE_AGENTS.includes(r.agent));
     } else if (filterType === 'sunmon') {
-        primaryData = primaryData.filter(r => SUN_MON_AGENTS.includes(r.agent));
+        primaryData = primaryData.filter(r => SUN_MON_AGENTS.includes(r.agent) && !LIVE_AGENTS.includes(r.agent));
     } else {
         // 'all' filter: Exclude LIVE_AGENTS and SEASONAL_AGENTS from All CSR 1
         primaryData = primaryData.filter(r => !LIVE_AGENTS.includes(r.agent) && !SEASONAL_AGENTS.includes(r.agent));
